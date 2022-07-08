@@ -18,15 +18,25 @@
 #
 
 import re
+import os
+import logging
 import numpy as np
 from collections import namedtuple
 
+from .metainfo import m_env
 from nomad.units import ureg
 from nomad.parsing import FairdiParser
-from nomad.parsing.file_parser import TextParser, Quantity
+from nomad.parsing.file_parser import TextParser, Quantity, DataTextParser
+from nomad.datamodel.metainfo.common_dft import Run, Method, System, XCFunctionals,\
+    ScfIteration, SingleConfigurationCalculation, SamplingMethod, FrameSequence, Eigenvalues,\
+    Dos, AtomProjectedDos, SpeciesProjectedDos, KBand, KBandSegment, EnergyVanDerWaals,\
+    BasisSetCellDependent, MethodBasisSet, CalculationToCalculationRefs, MethodToMethodRefs, AtomType
+from .metainfo.abacus import section_run as xsection_run, section_method as xsection_method,\
+    x_abacus_section_pseudopotential
 
 units_mapping = {'Ha': ureg.hartree, 'Ry': ureg.rydberg, 'eV': ureg.eV,
                  'bohr': ureg.bohr, 'A': ureg.angstrom, 'fs': ureg.fs, 'polar': ureg.C/ureg.meter**2}
+
 
 class ABACUSInputParser(TextParser):
     def __init__(self):
@@ -35,8 +45,12 @@ class ABACUSInputParser(TextParser):
     def init_quantities(self):
 
         self._quantities = [
-
+            Quantity(
+                xsection_method.x_abacus_xc_functional,
+                r'\n *dft_functional\s*()', repeats=False
+            ),
         ]
+
 
 class ABACUSOutParser(TextParser):
     def __init__(self):
@@ -189,6 +203,11 @@ class ABACUSOutParser(TextParser):
             Quantity(
                 'start_magnetization', r'start magnetization\s*=\s*(\w+)', repeats=True,
                 str_operation=lambda x: True if x == 'TRUE' else False
+            ),
+            Quantity(
+                'noncollinear_magnetization',
+                rf'noncollinear magnetization_x\s*=\s*({re_float})\n\s*noncollinear magnetization_y\s*=\s*({re_float})\n\s*noncollinear magnetization_z\s*=\s*({re_float})\n\s*',
+                dtype=float
             )
         ]
 
@@ -244,6 +263,10 @@ class ABACUSOutParser(TextParser):
             Quantity(
                 'bravais_name',
                 r'BRAVAIS\s*=\s*([\w ]+)', str_operation=lambda x:x
+            ),
+            Quantity(
+                'ibrav',
+                r'IBRAV\s*=\s*([\w ]+)', dtype=int
             ),
             Quantity(
                 'number_of_rotation_matrices',
@@ -356,13 +379,10 @@ class ABACUSOutParser(TextParser):
                              rf'number of zeta\s*=\s*({re_float})', dtype=int),
                     Quantity('number_of_projectors',
                              rf'number of projectors\s*=\s*({re_float})', dtype=int),
-                    Quantity(
-                        'l_of_projector', rf'L of projector\s*=\s*({re_float})', repeats=True, dtype=int),
                     Quantity('pao_radial_cut_off',
                              rf'PAO radial cut off \(Bohr\)\s*=\s*({re_float})', unit='bohr', dtype=float),
                     Quantity('initial_pseudo_atomic_orbital_number',
-                             rf'initial pseudo atomic orbital number\s*=\s*({re_float})'),
-                    Quantity('nlocal', rf'NLOCAL\s*=\s*({re_float})'),
+                             rf'initial pseudo atomic orbital number\s*=\s*({re_float})')
                 ]
                 )
             ),
@@ -375,6 +395,7 @@ class ABACUSOutParser(TextParser):
                 'occupied_bands',
                 rf'occupied bands\s*=\s*({re_float})'
             ),
+            Quantity('nlocal', rf'NLOCAL\s*=\s*({re_float})', repeats=False),
             Quantity(
                 'nbands',
                 rf'NBANDS\s*=\s*({re_float})', repeats=False
@@ -682,6 +703,16 @@ class ABACUSOutParser(TextParser):
                     Quantity(
                         'e_vdw', rf'E_vdwD\d+\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
                     ),
+                    Quantity(
+                        'magnetization_total',
+                        rf'total magnetism \(Bohr mag/cell\)\s*({re_float})\s*({re_float})\s*({re_float})',
+                        dtype=float, unit='bohr_magneton'
+                    ),
+                    Quantity(
+                        'magnetization_absolute',
+                        rf'absolute magnetism \(Bohr mag/cell\)\s*({re_float})',
+                        dtype=float, unit='bohr_magneton'
+                    ),
                 ]
                 )
             )
@@ -791,7 +822,7 @@ class ABACUSOutParser(TextParser):
             ),
             Quantity(
                 'nproc',
-                r'Processor Number is\s*(\d+)\n', str_operation=lambda x: ''.join(x), dtype=int
+                r'Processor Number is\s*(\d+)\n', dtype=int
             ),
             Quantity(
                 'start_date_time',
@@ -878,6 +909,60 @@ class ABACUSParser(FairdiParser):
         super().__init__(name='parsers/abacus', code_name='ABACUS',
                          code_homepage='http://abacus.ustc.edu.cn/',
                          mainfile_contents_re=r'(\n\s*WELCOME TO ABACUS)')
+        self._metainfo_env = m_env
         self.out_parser = ABACUSOutParser()
+        self.input_parser = ABACUSInputParser()
+        self.dos_parser = DataTextParser()
+        self.bandstructure_parser = DataTextParser()
+
+        self._xc_map = {
+            'Perdew-Wang parametrisation of Ceperley-Alder LDA': [
+                {'name': 'LDA_C_PW'}, {'name': 'LDA_X'}],
+            'Perdew-Zunger parametrisation of Ceperley-Alder LDA': [
+                {'name': 'LDA_C_PZ'}, {'name': 'LDA_X'}],
+            'BLYP functional': [{'name': 'GGA_C_LYP'}, {'name': 'GGA_X_B88'}],
+            'PBE gradient-corrected functionals': [
+                {'name': 'GGA_C_PBE'}, {'name': 'GGA_X_PBE'}],
+            'RPBE gradient-corrected functionals': [
+                {'name': 'GGA_C_PBE'}, {'name': 'GGA_X_RPBE'}],
+            'WC gradient-corrected functionals':[
+                {'name': 'GGA_C_PBE'}, {'name': 'GGA_X_WC'}],
+            'PW91 gradient-corrected functionals': [
+                {'name': 'GGA_C_PW91'}, {'name': 'GGA_X_PW91'}],
+            'HCTH-A gradient-corrected functionals': [
+                {'name': 'GGA_C_HCTH_A'}, {'name': 'GGA_X_HCTH_A'}],
+            'OLYP gradient-corrected functionals': [
+                {'name': 'GGA_C_LYP'}, {'name': 'GGA_X_OPTX'}],
+            'revPBE gradient-corrected functionals': [
+                {'name': 'GGA_C_PBE'}, {'name': 'GGA_X_PBE_R'}],
+            'SCAN gradient-corrected functionals': [
+                {'name': 'MGGA_C_SCAN'}, {'name': 'MGGA_X_SCAN'}],  
+
+            'PBEint gradient-corrected functional': [
+                {'name': 'GGA_C_PBEINT'}, {'name': 'GGA_X_PBEINT'}],
+            'PBEsol gradient-corrected functionals': [
+                {'name': 'GGA_C_PBE_SOL'}, {'name': 'GGA_X_PBE_SOL'}],
+            'hybrid-PBE0 functionals': [
+                {'name': 'GGA_C_PBE'}, {
+                    'name': 'GGA_X_PBE', 'weight': lambda x: 0.75 if x is None else 1.0 - x},
+                {'name': 'HF_X', 'weight': lambda x: 0.25 if x is None else x}],
+            'Hartree-Fock': [{'name': 'HF_X'}],
+            'HSE': [{'name': 'HYB_GGA_XC_HSE06'}],
+        }
+
+    def parse_method(self):
+        sec_run = self.archive.section_run[-1]
+        sec_method = sec_run.m_create(Method)
+
+        # xc functional from INPUT or output
+        xc_meta_list = self._xc_map.get(xc, [])
+        for xc_meta in xc_meta_list:
+            sec_xc_func = sec_method.m_create(XCFunctionals)
+
+    def parse(self, filepath, archive, logger):
+        self.filepath = os.path.abspath(filepath)
+        self.archive = archive
+        self.maindir = os.path.dirname(self.filepath)
+        self.logger = logger if logger is not None else logging
 # TODO: need to convert direct positions to cartesian ones, then thw cartesian ones multiply units bohr
 # symmetry, lattice_vector, rep_vector, position, converted

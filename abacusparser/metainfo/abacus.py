@@ -31,46 +31,32 @@ m_package = Package(
     description='None',
     a_legacy=LegacyDefinition(name='abacus.nomadmetainfo.json'))
 
-class x_abacus_input_method(MCategory):
+
+class x_abacus_input_settings(MCategory):
     '''
-    Parameters of INPUT belonging to section method.
+    Parameters of INPUT.
     '''
 
     m_def = Category(
-        a_legacy=LegacyDefinition(name='x_abacus_input_method'))
+        a_legacy=LegacyDefinition(name='x_abacus_input_settings'))
 
-class x_abacus_output_method(MCategory):
-    '''
-    Parameters of ABACUS output of parsed INPUT belonging to section method.
-    '''
 
-    m_def = Category(
-        a_legacy=LegacyDefinition(name='x_abacus_output_method'))
-
-class x_abacus_input_run(MCategory):
+class x_abacus_output_settings(MCategory):
     '''
-    Parameters of INPUT belonging to settings run.
+    Parameters of ABACUS output of parsed INPUT.
     '''
 
     m_def = Category(
-        categories=[public.settings_run],
-        a_legacy=LegacyDefinition(name='x_abacus_input_run'))
+        a_legacy=LegacyDefinition(name='x_abacus_output_settings'))
 
-class x_abacus_output_run(MCategory):
-    '''
-    Parameters of ABACUS output of parsed INPUT belonging to settings run.
-    '''
-
-    m_def = Category(
-        categories=[public.settings_run],
-        a_legacy=LegacyDefinition(name='x_abacus_output_run'))
 
 class x_abacus_section_parallel(MSection):
     '''
     section for run-time parallization options of ABACUS
     '''
 
-    m_def = Section(validate=False, a_legacy=LegacyDefinition(name='x_abacus_section_parallel'))
+    m_def = Section(validate=False, a_legacy=LegacyDefinition(
+        name='x_abacus_section_parallel'))
 
     x_abacus_nproc = Quantity(
         type=np.dtype(np.int32),
@@ -86,7 +72,7 @@ class x_abacus_section_parallel(MSection):
         description='''
         Devide all processors into kpar groups, and k points will be distributed among each group. 
         ''',
-        categories=[public.settings_run, x_abacus_input_run],
+        categories=[public.settings_run, x_abacus_input_settings],
         a_legacy=LegacyDefinition(name='x_abacus_kpar'))
 
     x_abacus_bndpar = Quantity(
@@ -95,7 +81,7 @@ class x_abacus_section_parallel(MSection):
         description='''
         Devide all processors into bndpar groups, and bands (only stochastic orbitals now) will be distributed among each group
         ''',
-        categories=[public.settings_run, x_abacus_input_run],
+        categories=[public.settings_run, x_abacus_input_settings],
         a_legacy=LegacyDefinition(name='x_abacus_bndpar'))
 
     x_abacus_diago_proc = Quantity(
@@ -104,12 +90,142 @@ class x_abacus_section_parallel(MSection):
         description='''
         If set to a positive number, then it specifies the number of threads used for carrying out diagonalization.
         ''',
-        categories=[public.settings_run, x_abacus_input_run],
+        categories=[public.settings_run, x_abacus_input_settings],
         a_legacy=LegacyDefinition(name='x_abacus_diago_proc'))
+
+class x_abacus_section_pseudopotential(MSection):
+    '''
+    pseudo-section for collecting pseudopotential data
+    '''
+
+    m_def = Section(validate=False, a_legacy=LegacyDefinition(name='x_abacus_section_pseudopotential'))
+
+    x_abacus_pp_filename = Quantity(
+        type=str,
+        shape=[],
+        description='''
+        Filename of pseudopotential
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_pp_filename'))
+
+    x_abacus_pp_xc = Quantity(
+        type=str,
+        shape=[],
+        description='''
+        Exchange-correlation functional of pseudopotential, e.g. 'PBE' or 'PZ'
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_pp_xc'))
+
+    x_abacus_pp_type = Quantity(
+        type=str,
+        shape=[],
+        description='''
+        Type of pseudopotential, e.g. 'Norm-conserving' or 'Ultrasoft'
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_pp_type'))
+
+    x_abacus_pp_valence = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        Number of Valence electrons in pseudopotential
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_pp_valence'))
+
+    x_abacus_pp_lmax = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        Maximum angular momentum component in pseudopotential
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_pp_lmax'))
+
+    x_abacus_pp_nzeta = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        Number of wavefunctions in pseudopotential
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_pp_nzeta'))
+
+    x_abacus_pp_nprojectors = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        Number of projectors in pseudopotential
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_pp_nprojectors'))
+
+    x_abacus_pao_radial_cutoff = Quantity(
+        type=np.dtype(np.float64),
+        unit='bohr',
+        shape=[],
+        description='''
+        Radial cut-off of pseudo atomic orbital
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_pao_radial_cutoff'))
+
+    x_abacus_npao = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        Number of pseudo atomic orbital
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_npao'))
+
+class section_single_configuration_calculation(public.section_single_configuration_calculation):
+
+    x_abacus_md_step_input = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[public.settings_molecular_dynamics,
+                    x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_md_step_input'))
+
+    x_abacus_md_step_output = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[public.settings_molecular_dynamics,
+                    x_abacus_output_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_md_step_output'))
+
+    x_abacus_initial_magnetization_total = Quantity(
+        type=np.dtype(np.float64),
+        unit='bohr_magneton',
+        shape=[],
+        description='''
+        Initial total magnetization of the system set in INPUT.
+        ''',
+        categories=[x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_magnetization_total_input'))
+
+    x_abacus_magnetization_total = Quantity(
+        type=np.dtype(np.float64),
+        shape=[],
+        description='''
+        Total per-cell magnetization
+        ''',
+        a_legacy=LegacyDefinition(name='x_qe_magnetization_total'))
+
+    x_abacus_magnetization_absolute = Quantity(
+        type=np.dtype(np.float64),
+        shape=[],
+        description='''
+        Absolute per-cell magnetization
+        ''',
+        a_legacy=LegacyDefinition(name='x_qe_magnetization_absolute'))
+
 
 class section_run(public.section_run):
 
-    m_def = Section(validate=False, extends_base_section=True, a_legacy=LegacyDefinition(name='section_run'))
+    m_def = Section(validate=False, extends_base_section=True,
+                    a_legacy=LegacyDefinition(name='section_run'))
 
     x_abacus_input_filename = Quantity(
         type=str,
@@ -119,13 +235,14 @@ class section_run(public.section_run):
         ''',
         a_legacy=LegacyDefinition(name='x_abacus_input_filename'))
 
-    x_abacus_output_suffix = Quantity(
+    x_abacus_outdir_suffix = Quantity(
         type=str,
         shape=[],
         description='''
         Suffix of output subdirectory
         ''',
-        a_legacy=LegacyDefinition(name='x_abacus_output_suffix'))
+        categories=[x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_outdir_suffix'))
 
     x_abacus_program_execution_date = Quantity(
         type=str,
@@ -149,6 +266,7 @@ class section_run(public.section_run):
         description='''
         Directory where initial atom_positions and lattice_vectors were read from
         ''',
+        categories=[x_abacus_input_settings],
         a_legacy=LegacyDefinition(name='x_abacus_stru_filename'))
 
     x_abacus_kpt_filename = Quantity(
@@ -157,6 +275,7 @@ class section_run(public.section_run):
         description='''
         Directory where k-points were read from
         ''',
+        categories=[x_abacus_input_settings],
         a_legacy=LegacyDefinition(name='x_abacus_kpt_filename'))
 
     x_abacus_basis_set_dirname = Quantity(
@@ -165,6 +284,7 @@ class section_run(public.section_run):
         description='''
         Directory where basis set were read from
         ''',
+        categories=[x_abacus_input_settings],
         a_legacy=LegacyDefinition(name='x_abacus_basis_set_dirname'))
 
     x_abacus_pseudopotential_dirname = Quantity(
@@ -173,6 +293,7 @@ class section_run(public.section_run):
         description='''
         Directory where pseudopotential were read from
         ''',
+        categories=[x_abacus_input_settings],
         a_legacy=LegacyDefinition(name='x_abacus_pseudopotential_dirname'))
 
     x_abacus_read_file_dirname = Quantity(
@@ -181,27 +302,8 @@ class section_run(public.section_run):
         description='''
         Directory where files such as electron density were read from
         ''',
+        categories=[x_abacus_input_settings],
         a_legacy=LegacyDefinition(name='x_abacus_read_file_dirname'))
-
-    x_abacus_input_md_time_step = Quantity(
-        type=np.dtype(np.float64),
-        shape=[],
-        unit='second',
-        description='''
-        -
-        ''',
-        categories=[public.settings_run, x_abacus_input_run],
-        a_legacy=LegacyDefinition(name='x_abacus_input_md_time_step'))
-
-    x_abacus_output_md_time_step = Quantity(
-        type=np.dtype(np.float64),
-        shape=[],
-        unit='second',
-        description='''
-        -
-        ''',
-        categories=[public.settings_run, x_abacus_output_run],
-        a_legacy=LegacyDefinition(name='x_abacus_output_md_time_step'))
 
     x_abacus_geometry_optimization_converged = Quantity(
         type=str,
@@ -216,9 +318,11 @@ class section_run(public.section_run):
         repeats=True,
         a_legacy=LegacyDefinition(name='x_abacus_section_parallel'))
 
+
 class section_method(public.section_method):
 
-    m_def = Section(validate=False, extends_base_section=True, a_legacy=LegacyDefinition(name='section_method'))
+    m_def = Section(validate=False, extends_base_section=True,
+                    a_legacy=LegacyDefinition(name='section_method'))
 
     x_abacus_diagonalization_algorithm = Quantity(
         type=str,
@@ -226,7 +330,7 @@ class section_method(public.section_method):
         description='''
         Algorithm used in subspace diagonalization
         ''',
-        categories=[x_abacus_input_method],
+        categories=[x_abacus_input_settings],
         a_legacy=LegacyDefinition(name='x_abacus_diagonalization_algorithm'))
 
     x_abacus_dispersion_correction_method = Quantity(
@@ -235,150 +339,164 @@ class section_method(public.section_method):
         description='''
         Calculation includes semi-empirical DFT-D dispersion correction
         ''',
-        categories=[x_abacus_input_method],
+        categories=[public.settings_van_der_Waals, x_abacus_input_settings],
         a_legacy=LegacyDefinition(name='x_abacus_dispersion_correction_method'))
 
-    x_abacus_dispersion_correction_s6 = Quantity(
-        type=np.dtype(np.float64),
+    x_abacus_occupations_method = Quantity(
+        type=str,
         shape=[],
         description='''
-        This scale factor is to optimize the interaction energy deviations
+        Specifies how to calculate the occupations of bands.
         ''',
-        categories=[x_abacus_input_method],
-        a_legacy=LegacyDefinition(name='x_abacus_dispersion_correction_s6'))
-    
-    x_abacus_dispersion_correction_s8 = Quantity(
-        type=np.dtype(np.float64),
-        shape=[],
-        description='''
-        This scale factor is only the parameter of DFTD3 approachs including D3(0) and D3(BJ).
-        ''',
-        categories=[x_abacus_input_method],
-        a_legacy=LegacyDefinition(name='x_abacus_dispersion_correction_s8'))
-    
-    x_abacus_dispersion_correction_a1 = Quantity(
-        type=np.dtype(np.float64),
-        shape=[],
-        description='''
-        This damping function parameter is only the parameter of DFT-D3 approachs including D3(0) and D3(BJ)
-        ''',
-        categories=[x_abacus_input_method],
-        a_legacy=LegacyDefinition(name='x_abacus_dispersion_correction_a1'))
+        categories=[public.settings_smearing, x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_occupations_method'))
 
-    x_abacus_dispersion_correction_a2 = Quantity(
+    x_abacus_smearing_method = Quantity(
+        type=str,
+        shape=[],
+        description='''
+        It indicates which occupation and smearing method is used in the calculation
+        ''',
+        categories=[public.settings_smearing, x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_smearing_method'))
+
+    x_abacus_smearing_sigma = Quantity(
+        type=np.dtype(np.float64),
+        shape=[],
+        unit='rydberg',
+        description='''
+        Energy range for smearing
+        ''',
+        categories=[public.settings_smearing, x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_smearing_sigma'))
+
+    x_abacus_mixing_method = Quantity(
+        type=str,
+        shape=[],
+        description='''
+        Charge mixing methods
+        ''',
+        categories=[public.settings_scf, x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_mixing_method'))
+
+    x_abacus_mixing_beta = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         description='''
-        This damping function arameter is only the parameter of DFT-D3(BJ) approach
+        Mixing method: parameter beta
         ''',
-        categories=[x_abacus_input_method],
-        a_legacy=LegacyDefinition(name='x_abacus_dispersion_correction_a2'))
+        categories=[public.settings_scf, x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_mixing_beta'))
 
-    x_abacus_dispersion_correction_d = Quantity(
-        type=np.dtype(np.float64),
-        shape=[],
-        description='''
-        The variable is to control the dumping speed of dumping function of DFT-D2.
-        ''',
-        categories=[x_abacus_input_method],
-        a_legacy=LegacyDefinition(name='x_abacus_dispersion_correction_d'))
-
-    x_abacus_dispersion_correction_abc = Quantity(
+    x_abacus_gamma_algorithms = Quantity(
         type=bool,
         shape=[],
         description='''
-        The variable is to control the calculation of three-body term of DFT-D3 approachs, including D3(0) and D3(BJ).
+        Usage of gamma-only optimized algorithms
         ''',
-        categories=[x_abacus_input_method],
-        a_legacy=LegacyDefinition(name='x_abacus_dispersion_correction_abc'))
+        categories=[public.settings_scf, x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_gamma_algorithms'))
 
-    x_abacus_dispersion_correction_C6_file = Quantity(
-        type=str,
+    x_abacus_scf_nmax = Quantity(
+        type=np.dtype(np.int32),
         shape=[],
         description='''
-        This variable which is useful only when set vdw_method to d2 specifies the name of each elemetent's C6 parameters file
+        This variable indicates the maximal iteration number for electronic iterations.
         ''',
-        categories=[x_abacus_input_method],
-        a_legacy=LegacyDefinition(name='x_abacus_dispersion_correction_C6_file'))
+        categories=[public.settings_scf, x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_scf_nmax'))
 
-    x_abacus_dispersion_correction_C6_unit = Quantity(
-        type=str,
-        shape=[],
-        description='''
-        This variable which is useful only when set vdw_method to d2 specifies unit of C6 parameters.
-        ''',
-        categories=[x_abacus_input_method],
-        a_legacy=LegacyDefinition(name='x_abacus_dispersion_correction_C6_unit'))
-
-    x_abacus_dispersion_correction_R0_file = Quantity(
-        type=str,
-        shape=[],
-        description='''
-        This variable which is useful only when set vdw_method to d2 specifies the name of each elemetent's R0 parameters file
-        ''',
-        categories=[x_abacus_input_method],
-        a_legacy=LegacyDefinition(name='x_abacus_dispersion_correction_R0_file'))
-
-    x_abacus_dispersion_correction_R0_unit = Quantity(
-        type=str,
-        shape=[],
-        description='''
-        This variable which is useful only when set vdw_method to d2 specifies unit of R0 parameters.
-        ''',
-        categories=[x_abacus_input_method],
-        a_legacy=LegacyDefinition(name='x_abacus_dispersion_correction_R0_unit'))
-
-    x_abacus_dispersion_correction_model = Quantity(
-        type=str,
-        shape=[],
-        description='''
-        To calculate the periodic structure, you can assign the number of lattice cells calculated.
-        ''',
-        categories=[x_abacus_input_method],
-        a_legacy=LegacyDefinition(name='x_abacus_dispersion_correction_model'))
-
-    x_abacus_dispersion_correction_radius = Quantity(
+    x_abacus_scf_thr = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         description='''
-        If vdw_model is set to radius, this variable specifies the radius of the calculated sphere.
+        The threshold for electronic iteration
         ''',
-        categories=[x_abacus_input_method],
-        a_legacy=LegacyDefinition(name='x_abacus_dispersion_correction_radius'))
+        categories=[public.settings_scf, x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_scf_thr'))
 
-    x_abacus_dispersion_correction_radius_unit = Quantity(
+    x_abacus_chg_extrap = Quantity(
         type=str,
         shape=[],
         description='''
-        If vdw_model is set to radius, this variable specifies the unit of vdw_radius.
+        Methods to do extrapolation of density when ABACUS is doing geometry relaxations
         ''',
-        categories=[x_abacus_input_method],
-        a_legacy=LegacyDefinition(name='x_abacus_dispersion_correction_radius_unit'))
+        categories=[public.settings_molecular_dynamics,
+                    public.settings_geometry_optimization, x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_chg_extrap'))
 
-    x_abacus_dispersion_correction_cn_radius = Quantity(
-        type=np.dtype(np.float64),
-        shape=[],
-        description='''
-        This cutoff is chosen for the calculation of the coordination number (CN) in DFT-D3 approachs,
-        ''',
-        categories=[x_abacus_input_method],
-        a_legacy=LegacyDefinition(name='x_abacus_dispersion_correction_cn_radius'))
-
-    x_abacus_dispersion_correction_cn_radius_unit = Quantity(
+    x_abacus_sto_method = Quantity(
         type=str,
         shape=[],
         description='''
-        This variable specifies the unit of vdw_cn_radius.
+        Methods to do SDFT
         ''',
-        categories=[x_abacus_input_method],
-        a_legacy=LegacyDefinition(name='x_abacus_dispersion_correction_cn_radius_unit'))
+        categories=[x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_sto_method'))
 
-    x_abacus_dispersion_correction_period = Quantity(
-        type=list,
+    x_abacus_xc_functional = Quantity(
+        type=str,
         shape=[],
         description='''
-        If vdw_model is set to period, these variables specify the number of x, y and z periodic.
+        Type of exchange-correlation functional used in calculation. 
         ''',
-        categories=[x_abacus_input_method],
-        a_legacy=LegacyDefinition(name='x_abacus_dispersion_correction_period'))
+        categories=[x_abacus_input_settings, public.settings_XC, public.settings_potential_energy_surface, public.settings_XC_functional],
+        a_legacy=LegacyDefinition(name='x_abacus_xc_functional'))
 
+    x_abacus_section_pseudopotential = SubSection(
+        sub_section=SectionProxy('x_abacus_section_pseudopotential'),
+        repeats=True,
+        a_legacy=LegacyDefinition(name='x_abacus_section_pseudopotential'))
+
+
+class section_system(public.section_system):
+
+    m_def = Section(validate=False, extends_base_section=True,
+                    a_legacy=LegacyDefinition(name='section_system'))
+
+    x_abacus_number_of_species = Quantity(
+        type=str,
+        shape=[],
+        description='''
+        Number of different atom species in this calculations.
+        ''',
+        categories=[x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_number_of_species'))
+
+    x_abacus_lattice_name_input = Quantity(
+        type=str,
+        shape=[],
+        description='''
+        Specifies the type of Bravias lattice in INPUT.
+        ''',
+        categories=[x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_lattice_name_input'))
+
+    x_abacus_lattice_name_output = Quantity(
+        type=str,
+        shape=[],
+        description='''
+        The type of Bravias lattice checked by ABACUS when open symmetry calculation.
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_lattice_name_output'))
+
+    x_abacus_number_of_electrons_input = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        This denotes total number of electrons in the system set in INPUT.
+        ''',
+        categories=[x_abacus_input_settings, public.configuration_core],
+        a_legacy=LegacyDefinition(name='x_abacus_number_of_electrons_input'))
+
+    x_abacus_number_of_electrons_output = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        This denotes total number of electrons in the system calculated by ABACUS.
+        ''',
+        categories=[x_abacus_output_settings, public.configuration_core],
+        a_legacy=LegacyDefinition(name='x_abacus_number_of_electrons_output'))
+
+
+m_package.__init_metainfo__()
