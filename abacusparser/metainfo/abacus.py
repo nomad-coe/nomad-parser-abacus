@@ -64,6 +64,7 @@ class x_abacus_section_parallel(MSection):
         description='''
         Number of processors
         ''',
+        categories=[public.parallelization_info],
         a_legacy=LegacyDefinition(name='x_abacus_nproc'))
 
     x_abacus_kpar = Quantity(
@@ -93,85 +94,6 @@ class x_abacus_section_parallel(MSection):
         categories=[public.settings_run, x_abacus_input_settings],
         a_legacy=LegacyDefinition(name='x_abacus_diago_proc'))
 
-class x_abacus_section_pseudopotential(MSection):
-    '''
-    pseudo-section for collecting pseudopotential data
-    '''
-
-    m_def = Section(validate=False, a_legacy=LegacyDefinition(name='x_abacus_section_pseudopotential'))
-
-    x_abacus_pp_filename = Quantity(
-        type=str,
-        shape=[],
-        description='''
-        Filename of pseudopotential
-        ''',
-        a_legacy=LegacyDefinition(name='x_abacus_pp_filename'))
-
-    x_abacus_pp_xc = Quantity(
-        type=str,
-        shape=[],
-        description='''
-        Exchange-correlation functional of pseudopotential, e.g. 'PBE' or 'PZ'
-        ''',
-        a_legacy=LegacyDefinition(name='x_abacus_pp_xc'))
-
-    x_abacus_pp_type = Quantity(
-        type=str,
-        shape=[],
-        description='''
-        Type of pseudopotential, e.g. 'Norm-conserving' or 'Ultrasoft'
-        ''',
-        a_legacy=LegacyDefinition(name='x_abacus_pp_type'))
-
-    x_abacus_pp_valence = Quantity(
-        type=np.dtype(np.int32),
-        shape=[],
-        description='''
-        Number of Valence electrons in pseudopotential
-        ''',
-        a_legacy=LegacyDefinition(name='x_abacus_pp_valence'))
-
-    x_abacus_pp_lmax = Quantity(
-        type=np.dtype(np.int32),
-        shape=[],
-        description='''
-        Maximum angular momentum component in pseudopotential
-        ''',
-        a_legacy=LegacyDefinition(name='x_abacus_pp_lmax'))
-
-    x_abacus_pp_nzeta = Quantity(
-        type=np.dtype(np.int32),
-        shape=[],
-        description='''
-        Number of wavefunctions in pseudopotential
-        ''',
-        a_legacy=LegacyDefinition(name='x_abacus_pp_nzeta'))
-
-    x_abacus_pp_nprojectors = Quantity(
-        type=np.dtype(np.int32),
-        shape=[],
-        description='''
-        Number of projectors in pseudopotential
-        ''',
-        a_legacy=LegacyDefinition(name='x_abacus_pp_nprojectors'))
-
-    x_abacus_pao_radial_cutoff = Quantity(
-        type=np.dtype(np.float64),
-        unit='bohr',
-        shape=[],
-        description='''
-        Radial cut-off of pseudo atomic orbital
-        ''',
-        a_legacy=LegacyDefinition(name='x_abacus_pao_radial_cutoff'))
-
-    x_abacus_npao = Quantity(
-        type=np.dtype(np.int32),
-        shape=[],
-        description='''
-        Number of pseudo atomic orbital
-        ''',
-        a_legacy=LegacyDefinition(name='x_abacus_npao'))
 
 class section_single_configuration_calculation(public.section_single_configuration_calculation):
 
@@ -194,16 +116,6 @@ class section_single_configuration_calculation(public.section_single_configurati
         categories=[public.settings_molecular_dynamics,
                     x_abacus_output_settings],
         a_legacy=LegacyDefinition(name='x_abacus_md_step_output'))
-
-    x_abacus_initial_magnetization_total = Quantity(
-        type=np.dtype(np.float64),
-        unit='bohr_magneton',
-        shape=[],
-        description='''
-        Initial total magnetization of the system set in INPUT.
-        ''',
-        categories=[x_abacus_input_settings],
-        a_legacy=LegacyDefinition(name='x_abacus_magnetization_total_input'))
 
     x_abacus_magnetization_total = Quantity(
         type=np.dtype(np.float64),
@@ -324,6 +236,16 @@ class section_method(public.section_method):
     m_def = Section(validate=False, extends_base_section=True,
                     a_legacy=LegacyDefinition(name='section_method'))
 
+    x_abacus_initial_magnetization_total = Quantity(
+        type=np.dtype(np.float64),
+        unit='bohr_magneton',
+        shape=[],
+        description='''
+        Initial total magnetization of the system set in INPUT.
+        ''',
+        categories=[x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_initial_magnetization_total'))
+
     x_abacus_diagonalization_algorithm = Quantity(
         type=str,
         shape=[],
@@ -443,10 +365,34 @@ class section_method(public.section_method):
         categories=[x_abacus_input_settings, public.settings_XC, public.settings_potential_energy_surface, public.settings_XC_functional],
         a_legacy=LegacyDefinition(name='x_abacus_xc_functional'))
 
-    x_abacus_section_pseudopotential = SubSection(
-        sub_section=SectionProxy('x_abacus_section_pseudopotential'),
-        repeats=True,
-        a_legacy=LegacyDefinition(name='x_abacus_section_pseudopotential'))
+    x_abacus_pao_radial_cutoff = Quantity(
+        type=np.dtype(np.float64),
+        unit='bohr',
+        shape=[],
+        description='''
+        Radial cut-off of pseudo atomic orbital
+        ''',
+        categories=[x_abacus_output_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_pao_radial_cutoff'))
+
+    x_abacus_hse_omega = Quantity(
+        type=np.dtype(np.float64),
+        unit='1 / bohr',
+        shape=[],
+        description='''
+        HSE omega
+        ''',
+        categories=[x_abacus_input_settings, public.settings_XC, public.settings_potential_energy_surface, public.settings_XC_functional],
+        a_legacy=LegacyDefinition(name='x_abacus_hse_omega'))
+
+    x_abacus_hybrid_xc_coeff = Quantity(
+        type=np.dtype(np.float64),
+        shape=[],
+        description='''
+        Mixing parameter of hybrid functionals
+        ''',
+        categories=[x_abacus_input_settings, public.settings_XC, public.settings_potential_energy_surface, public.settings_XC_functional],
+        a_legacy=LegacyDefinition(name='x_abacus_hybrid_xc_coeff'))
 
 
 class section_system(public.section_system):
@@ -498,5 +444,40 @@ class section_system(public.section_system):
         categories=[x_abacus_output_settings, public.configuration_core],
         a_legacy=LegacyDefinition(name='x_abacus_number_of_electrons_output'))
 
+
+class section_method_atom_kind(public.section_method_atom_kind):
+    m_def = Section(validate=False, extends_base_section=True, a_legacy=LegacyDefinition(name='section_method_atom_kind'))
+
+    x_abacus_pp_type = Quantity(
+        type=str,
+        shape=[],
+        description='''
+        Type of pseudopotential, e.g. 'NC' or 'US'
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_pp_type'))
+
+    x_abacus_pp_lmax = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        Maximum angular momentum component in pseudopotential
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_pp_lmax'))
+
+    x_abacus_pp_nzeta = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        Number of wavefunctions in pseudopotential
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_pp_nzeta'))
+
+    x_abacus_pp_nprojectors = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        Number of projectors in pseudopotential
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_pp_nprojectors'))
 
 m_package.__init_metainfo__()

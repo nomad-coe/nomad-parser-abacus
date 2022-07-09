@@ -22,6 +22,7 @@ import os
 import logging
 import numpy as np
 from collections import namedtuple
+from datetime import datetime
 
 from .metainfo import m_env
 from nomad.units import ureg
@@ -30,12 +31,14 @@ from nomad.parsing.file_parser import TextParser, Quantity, DataTextParser
 from nomad.datamodel.metainfo.common_dft import Run, Method, System, XCFunctionals,\
     ScfIteration, SingleConfigurationCalculation, SamplingMethod, FrameSequence, Eigenvalues,\
     Dos, AtomProjectedDos, SpeciesProjectedDos, KBand, KBandSegment, EnergyVanDerWaals,\
-    BasisSetCellDependent, MethodBasisSet, CalculationToCalculationRefs, MethodToMethodRefs, AtomType
-from .metainfo.abacus import section_run as xsection_run, section_method as xsection_method,\
-    x_abacus_section_pseudopotential
+    BasisSetCellDependent, MethodBasisSet, MethodAtomKind, CalculationToCalculationRefs,\
+    MethodToMethodRefs, AtomType
+from .metainfo.abacus import section_run as xsection_run, section_method as xsection_method, x_abacus_input_settings,\
+    x_abacus_section_parallel
 
 units_mapping = {'Ha': ureg.hartree, 'Ry': ureg.rydberg, 'eV': ureg.eV,
                  'bohr': ureg.bohr, 'A': ureg.angstrom, 'fs': ureg.fs, 'polar': ureg.C/ureg.meter**2}
+re_float = r'[\d\.\-\+Ee]+'
 
 
 class ABACUSInputParser(TextParser):
@@ -46,8 +49,32 @@ class ABACUSInputParser(TextParser):
 
         self._quantities = [
             Quantity(
-                xsection_method.x_abacus_xc_functional,
-                r'\n *dft_functional\s*()', repeats=False
+                'xc',
+                r'\n *dft_functional\s*(\w+)', repeats=False, 
+            ),
+            Quantity(
+                x_abacus_section_parallel.x_abacus_kpar,
+                r'\n *kpar\s*(\d+)', repeats=False
+            ),
+            Quantity(
+                x_abacus_section_parallel.x_abacus_bndpar,
+                r'\n *bndpar\s*(\d+)', repeats=False
+            ),
+            Quantity(
+                x_abacus_section_parallel.x_abacus_diago_proc,
+                r'\n *diago_proc\s*(\d+)', repeats=False
+            ),
+            Quantity(
+                xsection_method.x_abacus_initial_magnetization_total,
+                rf'\n *tot_magnetization\s*({re_float})', repeats=False
+            ),
+            Quantity(
+                xsection_method.x_abacus_hse_omega,
+                rf'\n *tot_magnetization\s*({re_float})', repeats=False
+            ),
+            Quantity(
+                xsection_method.x_abacus_hybrid_xc_coeff,
+                rf'\n *tot_magnetization\s*({re_float})', repeats=False
             ),
         ]
 
@@ -187,8 +214,6 @@ class ABACUSOutParser(TextParser):
             P = namedtuple('P', ['value', 'mod', 'vector'])
             data = np.array(val_in.split(), dtype=float)
             return P(value=data[0]*units_mapping['polar'], mod=data[1], vector=data[2:]*units_mapping['polar'])
-
-        re_float = r'[\d\.\-\+Ee]+'
 
         atom_quantities = [
             Quantity(
@@ -375,17 +400,15 @@ class ABACUSOutParser(TextParser):
                     Quantity(
                         'valence', rf'valence electrons\s*=\s*({re_float})'),
                     Quantity('lmax', rf'lmax\s*=\s*({re_float})'),
-                    Quantity('number_of_zeta',
+                    Quantity('nzeta',
                              rf'number of zeta\s*=\s*({re_float})', dtype=int),
-                    Quantity('number_of_projectors',
-                             rf'number of projectors\s*=\s*({re_float})', dtype=int),
-                    Quantity('pao_radial_cut_off',
-                             rf'PAO radial cut off \(Bohr\)\s*=\s*({re_float})', unit='bohr', dtype=float),
-                    Quantity('initial_pseudo_atomic_orbital_number',
-                             rf'initial pseudo atomic orbital number\s*=\s*({re_float})')
+                    Quantity('nprojectors',
+                             rf'number of projectors\s*=\s*({re_float})', dtype=int)
                 ]
                 )
             ),
+            Quantity(xsection_method.x_abacus_pao_radial_cutoff,
+                     rf'PAO radial cut off \(Bohr\)\s*=\s*({re_float})', unit='bohr', dtype=float, repeats=False),
             Quantity(
                 'number_of_electrons',
                 rf'total electron number of element (\w+)\s*=\s*(\d+)', repeats=True,
@@ -406,7 +429,7 @@ class ABACUSOutParser(TextParser):
                 sub_parser=TextParser(quantities=symmetry_quantities)
             ),
             Quantity(
-                'nspin',
+                xsection_method.number_of_spin_channels,
                 r'nspin\s*=\s*(\d+)', dtype=int
             ),
             Quantity(
@@ -817,11 +840,11 @@ class ABACUSOutParser(TextParser):
 
         run_quantities = [
             Quantity(
-                'program_version',
+                Run.program_version,
                 r'Version:\s*(.*)\n', str_operation=lambda x: ''.join(x)
             ),
             Quantity(
-                'nproc',
+                x_abacus_section_parallel.x_abacus_nproc,
                 r'Processor Number is\s*(\d+)\n', dtype=int
             ),
             Quantity(
@@ -832,13 +855,13 @@ class ABACUSOutParser(TextParser):
                 'global_out_dir', r'global_out_dir\s*=\s*(.*)\n',
             ),
             Quantity(
-                'global_in_card', r'global_in_card\s*=\s*(.*)\n',
+                xsection_run.x_abacus_input_filename, r'global_in_card\s*=\s*(.*)\n',
             ),
             Quantity(
-                'pseudo_dir', r'pseudo_dir\s*=\s*([.\w\-\\ ]*?)',
+                xsection_run.x_abacus_pseudopotential_dirname, r'pseudo_dir\s*=\s*([.\w\-\\ ]*?)',
             ),
             Quantity(
-                'orbital_dir', r'orbital_dir\s*=\s*([.\w\-\\ ]*?)',
+                xsection_run.x_abacus_basis_set_dirname, r'orbital_dir\s*=\s*([.\w\-\\ ]*?)',
             ),
             Quantity(
                 'drank', r'DRANK\s*=\s*(\d+)\n', dtype=int
@@ -916,53 +939,140 @@ class ABACUSParser(FairdiParser):
         self.bandstructure_parser = DataTextParser()
 
         self._xc_map = {
-            'Perdew-Wang parametrisation of Ceperley-Alder LDA': [
+            'PWLDA': [
                 {'name': 'LDA_C_PW'}, {'name': 'LDA_X'}],
-            'Perdew-Zunger parametrisation of Ceperley-Alder LDA': [
+            'PZ': [
                 {'name': 'LDA_C_PZ'}, {'name': 'LDA_X'}],
-            'BLYP functional': [{'name': 'GGA_C_LYP'}, {'name': 'GGA_X_B88'}],
-            'PBE gradient-corrected functionals': [
+            'LDA': [
+                {'name': 'LDA_C_PZ'}, {'name': 'LDA_X'}],
+            'BLYP': [
+                {'name': 'GGA_C_LYP'}, {'name': 'GGA_X_B88'}],
+            'BP': [
+                {'name': 'GGA_C_P86'}, {'name': 'GGA_X_B88'}],
+            'PBE': [
                 {'name': 'GGA_C_PBE'}, {'name': 'GGA_X_PBE'}],
-            'RPBE gradient-corrected functionals': [
+            'RPBE': [
                 {'name': 'GGA_C_PBE'}, {'name': 'GGA_X_RPBE'}],
-            'WC gradient-corrected functionals':[
+            'WC': [
                 {'name': 'GGA_C_PBE'}, {'name': 'GGA_X_WC'}],
-            'PW91 gradient-corrected functionals': [
+            'PW91': [
                 {'name': 'GGA_C_PW91'}, {'name': 'GGA_X_PW91'}],
-            'HCTH-A gradient-corrected functionals': [
+            'HCTH': [
                 {'name': 'GGA_C_HCTH_A'}, {'name': 'GGA_X_HCTH_A'}],
-            'OLYP gradient-corrected functionals': [
+            'OLYP': [
                 {'name': 'GGA_C_LYP'}, {'name': 'GGA_X_OPTX'}],
-            'revPBE gradient-corrected functionals': [
+            'REVPBE': [
                 {'name': 'GGA_C_PBE'}, {'name': 'GGA_X_PBE_R'}],
-            'SCAN gradient-corrected functionals': [
-                {'name': 'MGGA_C_SCAN'}, {'name': 'MGGA_X_SCAN'}],  
-
-            'PBEint gradient-corrected functional': [
-                {'name': 'GGA_C_PBEINT'}, {'name': 'GGA_X_PBEINT'}],
-            'PBEsol gradient-corrected functionals': [
-                {'name': 'GGA_C_PBE_SOL'}, {'name': 'GGA_X_PBE_SOL'}],
-            'hybrid-PBE0 functionals': [
+            'SCAN': [
+                {'name': 'MGGA_C_SCAN'}, {'name': 'MGGA_X_SCAN'}],
+            'HF': [{'name': 'HF_X'}],
+            'HSE': [{'name': 'HYB_GGA_XC_HSE06'}],
+            'PBE0': [
                 {'name': 'GGA_C_PBE'}, {
                     'name': 'GGA_X_PBE', 'weight': lambda x: 0.75 if x is None else 1.0 - x},
                 {'name': 'HF_X', 'weight': lambda x: 0.25 if x is None else x}],
-            'Hartree-Fock': [{'name': 'HF_X'}],
-            'HSE': [{'name': 'HYB_GGA_XC_HSE06'}],
         }
 
-    def parse_method(self):
+    def parse_configurations(self):
+        sec_run = self.archive.section_run[-1]
+
+        def parse_scf(iteration):
+            sec_scc = sec_run.section_single_configuration_calculation[-1]
+            sec_scf = sec_scc.m_create(ScfIteration)
+
+            date_time = iteration.get('start_date_time')
+            if date_time is not None:
+                date_time = datetime.strptime(
+                    date_time.replace(' ', ''), '%a%b%d%H:%M:%S%Y')
+                sec_run.time_run_date_start = (
+                    date_time - datetime(1970, 1, 1)).total_seconds()
+
+            # magnetization
+            for key in ['magnetization_total', 'magnetization_absolute']:
+                val = iteration.get(key)
+                if val is None:
+                    continue
+                setattr(sec_scc, 'x_abacus_%s' % key, val[-1].magnitude)
+
+    def parse_method(self, run):
         sec_run = self.archive.section_run[-1]
         sec_method = sec_run.m_create(Method)
+        header = run.get('header', {})
 
-        # xc functional from INPUT or output
-        xc_meta_list = self._xc_map.get(xc, [])
-        for xc_meta in xc_meta_list:
-            sec_xc_func = sec_method.m_create(XCFunctionals)
+        # atom_kind and pseudopotential settings
+        pp_xc = ''
+        for i, pp in enumerate(header.get('pseudopotential')):
+            sec_method_atom_kind = sec_method.m_create(MethodAtomKind)
+            sec_method_atom_kind.method_atom_kind_label = header.get('atom_data')[i].get('label')
+            sec_method_atom_kind.method_atom_kind_explicit_electrons = pp.get('valence')
+            sec_method_atom_kind.method_atom_kind_pseudopotential_name = os.path.basename(pp.get('filename', ''))
+            sec_method.x_abacus_pao_radial_cutoff = header.get('x_abacus_pao_radial_cutoff')
+            for key, val in pp.items():
+                if key in ['filename', 'valence'] or val is None:
+                    continue
+                if key == 'xc':
+                    pp_xc = pp.get('xc', None)
+                else:
+                    setattr(sec_method_atom_kind, 'x_abacus_pp_%s' % key, val)
+
+        # xc functional from output
+        xc_in = self.input_parser.get('xc', None)
+        if xc_in is not None:
+            xc = xc_in.upper()
+        else:
+            xc = pp_xc
+
+        if xc is not None:
+            xsection_method.x_abacus_xc_functional = xc
+
+            # hybrid func
+            if xc in ['HYB_GGA_XC_HSE06', 'HSE']:
+                hse_omega = self.input_parser.get('x_abacus_hse_omega')
+                sec_method.x_abacus_hse_omega = hse_omega
+            if xc in ['HYB_GGA_XC_HSE06', 'HSE', 'PBE0']:
+                hybrid_coeff = self.input_parser.get('x_abacus_hybrid_xc_coeff')
+                sec_method.x_abacus_hybrid_xc_coeff = hybrid_coeff
+
+            if 'LDA_' in xc or 'GGA_' in xc or 'HF_' in xc or 'HYB_' in xc:
+                xc_meta_list = []
+                for xc_i in xc.split('+'):
+                    xc_meta_list.append({'name':xc_i})
+            else:
+                xc_meta_list = self._xc_map.get(xc, [])
+            for xc_meta in xc_meta_list:
+                sec_xc_func = sec_method.m_create(XCFunctionals)
+                sec_xc_func.XC_functional_name = xc_meta.get('name')
+                weight = xc_meta.get('weight', None)
+                if weight is not None and hybrid_coeff is not None:
+                    sec_xc_func.XC_functional_weight = weight(float(hybrid_coeff))
+                xc_parameters = dict()
+                if hse_omega is not None:
+                    hybrid_coeff = 0.25 if hybrid_coeff is None else hybrid_coeff
+                    xc_parameters.setdefault('$\\omega$ in bohr^-1', hse_omega)
+                if hybrid_coeff is not None:
+                    xc_parameters.setdefault('hybrid coefficient $\\alpha$', hybrid_coeff)
+                if xc_parameters:
+                    sec_xc_func.XC_functional_parameters = xc_parameters
+
+    def init_parser(self):
+        self.out_parser.mainfile = self.filepath
+        self.out_parser.logger = self.logger
+        self.control_parser.logger = self.logger
+        self.dos_parser.logger = self.logger
+        self.bandstructure_parser.logger = self.logger
 
     def parse(self, filepath, archive, logger):
         self.filepath = os.path.abspath(filepath)
         self.archive = archive
         self.maindir = os.path.dirname(self.filepath)
         self.logger = logger if logger is not None else logging
+
+        self._electronic_structure_method = 'DFT'
+        self.init_parser()
+
+        sec_run = self.archive.m_create(Run)
+        sec_run.program_name = 'ABACUS'
+        sec_run.program_basis_set_type = 'numeric AOs'
+
 # TODO: need to convert direct positions to cartesian ones, then thw cartesian ones multiply units bohr
 # symmetry, lattice_vector, rep_vector, position, converted
