@@ -95,6 +95,120 @@ class x_abacus_section_parallel(MSection):
         a_legacy=LegacyDefinition(name='x_abacus_diago_proc'))
 
 
+class x_abacus_section_specie_basis_set(MSection):
+    '''
+    definition of each basis set 
+    '''
+
+    m_def = Section(validate=False, a_legacy=LegacyDefinition(name='x_abacus_section_specie_basis_set'))
+
+    x_abacus_specie_basis_set_filename = Quantity(
+        type=str,
+        shape=[],
+        description='''
+        Filename of basis set
+        ''',
+        categories=[x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_specie_basis_set_filename'))
+
+    x_abacus_specie_basis_set_ln = Quantity(
+        type=np.dtype(np.int32),
+        shape=['x_abacus_specie_basis_set_number_of_orbitals', 2],
+        description='''
+        -
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_specie_basis_set_ln'))
+
+    x_abacus_specie_basis_set_rmesh = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_specie_basis_set_rmesh'))
+
+    x_abacus_specie_basis_set_rcutoff = Quantity(
+        type=np.dtype(np.float64),
+        unit='bohr',
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_specie_basis_set_rcutoff'))
+
+    x_abacus_specie_basis_set_number_of_orbitals = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        -
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_specie_basis_set_number_of_orbitals'))
+
+
+class x_abacus_section_basis_sets(MSection):
+    '''
+    section for numerical atomic orbitals of ABACUS
+    '''
+
+    m_def = Section(validate=False, a_legacy=LegacyDefinition(
+        name='x_abacus_section_basis_sets'))
+
+    x_abacus_basis_sets_delta_k = Quantity(
+        type=np.dtype(np.float64),
+        unit='1 / bohr',
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[x_abacus_output_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_basis_sets_delta_k'))
+
+    x_abacus_basis_sets_delta_r = Quantity(
+        type=np.dtype(np.float64),
+        unit='bohr',
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_basis_sets_delta_r'))
+
+    x_abacus_basis_sets_dr_uniform = Quantity(
+        type=np.dtype(np.float64),
+        unit='bohr',
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_basis_sets_dr_uniform'))
+
+    x_abacus_basis_sets_rmax = Quantity(
+        type=np.dtype(np.float64),
+        unit='bohr',
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_basis_sets_rmax'))
+
+    x_abacus_basis_sets_kmesh = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[x_abacus_output_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_basis_sets_kmesh'))
+
+    x_abacus_section_specie_basis_set = SubSection(
+        sub_section=SectionProxy('x_abacus_section_specie_basis_set'),
+        repeats=True,
+        a_legacy=LegacyDefinition(name='x_abacus_section_specie_basis_set'))
+
 class section_single_configuration_calculation(public.section_single_configuration_calculation):
 
     x_abacus_md_step_input = Quantity(
@@ -147,15 +261,6 @@ class section_run(public.section_run):
         ''',
         a_legacy=LegacyDefinition(name='x_abacus_input_filename'))
 
-    x_abacus_outdir_suffix = Quantity(
-        type=str,
-        shape=[],
-        description='''
-        Suffix of output subdirectory
-        ''',
-        categories=[x_abacus_input_settings],
-        a_legacy=LegacyDefinition(name='x_abacus_outdir_suffix'))
-
     x_abacus_program_execution_date = Quantity(
         type=str,
         shape=[],
@@ -207,15 +312,6 @@ class section_run(public.section_run):
         ''',
         categories=[x_abacus_input_settings],
         a_legacy=LegacyDefinition(name='x_abacus_pseudopotential_dirname'))
-
-    x_abacus_read_file_dirname = Quantity(
-        type=str,
-        shape=[],
-        description='''
-        Directory where files such as electron density were read from
-        ''',
-        categories=[x_abacus_input_settings],
-        a_legacy=LegacyDefinition(name='x_abacus_read_file_dirname'))
 
     x_abacus_geometry_optimization_converged = Quantity(
         type=str,
@@ -394,20 +490,51 @@ class section_method(public.section_method):
         categories=[x_abacus_input_settings, public.settings_XC, public.settings_potential_energy_surface, public.settings_XC_functional],
         a_legacy=LegacyDefinition(name='x_abacus_hybrid_xc_coeff'))
 
+    x_abacus_number_of_pw_for_wavefunction = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[x_abacus_output_settings, public.basis_set_description],
+        a_legacy=LegacyDefinition(name='x_abacus_number_of_pw_for_wavefunction'))
+
+    x_abacus_number_of_sticks_for_wavefunction = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[x_abacus_output_settings, public.basis_set_description],
+        a_legacy=LegacyDefinition(name='x_abacus_number_of_sticks_for_wavefunction'))
+
+    x_abacus_number_of_pw_for_density = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[x_abacus_output_settings, public.basis_set_description],
+        a_legacy=LegacyDefinition(name='x_abacus_number_of_pw_for_density'))
+
+    x_abacus_number_of_sticks_for_density = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[x_abacus_output_settings, public.basis_set_description],
+        a_legacy=LegacyDefinition(name='x_abacus_number_of_sticks_for_density'))
+
+    x_abacus_section_basis_sets = SubSection(
+        sub_section=SectionProxy('x_abacus_section_basis_sets'),
+        repeats=True,
+        a_legacy=LegacyDefinition(name='x_abacus_section_basis_sets'))
 
 class section_system(public.section_system):
 
     m_def = Section(validate=False, extends_base_section=True,
                     a_legacy=LegacyDefinition(name='section_system'))
-
-    x_abacus_number_of_species = Quantity(
-        type=str,
-        shape=[],
-        description='''
-        Number of different atom species in this calculations.
-        ''',
-        categories=[x_abacus_input_settings],
-        a_legacy=LegacyDefinition(name='x_abacus_number_of_species'))
 
     x_abacus_lattice_name_input = Quantity(
         type=str,

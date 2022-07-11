@@ -21,7 +21,7 @@ import re
 import os
 import logging
 import numpy as np
-from collections import namedtuple
+from collections import namedtuple, OrderedDict, defaultdict
 from datetime import datetime
 
 from .metainfo import m_env
@@ -33,8 +33,8 @@ from nomad.datamodel.metainfo.common_dft import Run, Method, System, XCFunctiona
     Dos, AtomProjectedDos, SpeciesProjectedDos, KBand, KBandSegment, EnergyVanDerWaals,\
     BasisSetCellDependent, MethodBasisSet, MethodAtomKind, CalculationToCalculationRefs,\
     MethodToMethodRefs, AtomType
-from .metainfo.abacus import section_run as xsection_run, section_method as xsection_method, x_abacus_input_settings,\
-    x_abacus_section_parallel
+from .metainfo.abacus import section_run as xsection_run, section_method as xsection_method,\
+    x_abacus_section_parallel, x_abacus_section_basis_sets, x_abacus_section_specie_basis_set
 
 units_mapping = {'Ha': ureg.hartree, 'Ry': ureg.rydberg, 'eV': ureg.eV,
                  'bohr': ureg.bohr, 'A': ureg.angstrom, 'fs': ureg.fs, 'polar': ureg.C/ureg.meter**2}
@@ -49,19 +49,27 @@ class ABACUSInputParser(TextParser):
 
         self._quantities = [
             Quantity(
+                'stru_filename',
+                r'\n *stru_file\s*(\w+)', repeats=False,
+            ),
+            Quantity(
+                'kpt_filename',
+                r'\n *stru_file\s*(\w+)', repeats=False,
+            ),
+            Quantity(
                 'xc',
                 r'\n *dft_functional\s*(\w+)', repeats=False, 
             ),
             Quantity(
-                x_abacus_section_parallel.x_abacus_kpar,
+                'kpar',
                 r'\n *kpar\s*(\d+)', repeats=False
             ),
             Quantity(
-                x_abacus_section_parallel.x_abacus_bndpar,
+                'bndpar',
                 r'\n *bndpar\s*(\d+)', repeats=False
             ),
             Quantity(
-                x_abacus_section_parallel.x_abacus_diago_proc,
+                'diago_proc',
                 r'\n *diago_proc\s*(\d+)', repeats=False
             ),
             Quantity(
@@ -335,7 +343,7 @@ class ABACUSOutParser(TextParser):
             Quantity(
                 'orbital_information',
                 r'ORBITAL\s*L\s*N\s*nr\s*dr\s*RCUT\s*CHECK_UNIT\s*NEW_UNIT\n([\s\S]+)SET NONLOCAL PSEUDOPOTENTIAL PROJECTORS',
-                convert=False, str_operation=str_to_orbital
+                convert=False, str_operation=str_to_orbital, repeats=True
             )
         ]
 
@@ -347,6 +355,12 @@ class ABACUSOutParser(TextParser):
             Quantity(
                 'alat',
                 rf'lattice constant \(Bohr\)\s*=\s*({re_float})', unit='bohr', dtype=float
+            ),
+            Quantity(
+                'atom_labels', r'atom label\s*=\s*(\w+)', repeats=True
+            ),
+            Quantity(
+                'number_of_atoms_for_labels', r'number of atom for this type\s*=\s*(\d+)', repeats=True
             ),
             Quantity(
                 'atom_data',
@@ -430,7 +444,7 @@ class ABACUSOutParser(TextParser):
             ),
             Quantity(
                 xsection_method.number_of_spin_channels,
-                r'nspin\s*=\s*(\d+)', dtype=int
+                r'nspin\s*=\s*(\d+)', dtype=int, repeats=False, str_operation=lambda x: 1 if int(x)==4 else x
             ),
             Quantity(
                 'sampling_method',
@@ -450,15 +464,11 @@ class ABACUSOutParser(TextParser):
                 str_operation=str_to_kpoints,
             ),
             Quantity(
-                'wavefunction_cutoff',
-                rf'energy cutoff for wavefunc \(unit:Ry\)\s*=\s*({re_float})', unit='rydberg', dtype=float
+                'density_cutoff',
+                rf'energy cutoff for charge/potential \(unit:Ry\)\s*=\s*({re_float})', unit='rydberg', dtype=float
             ),
             Quantity(
-                'wavefunction_fft_grid',
-                r'\[fft grid for wave functions\]\s*=\s*(\d+)[,\s]*(\d+)[,\s]*(\d+)[,\s]*'
-            ),
-            Quantity(
-                'charge_fft_grid',
+                'density_fft_grid',
                 r'\[fft grid for charge/potential\]\s*=\s*(\d+)[,\s]*(\d+)[,\s]*(\d+)[,\s]*'
             ),
             Quantity(
@@ -474,34 +484,17 @@ class ABACUSOutParser(TextParser):
                 r'nrxx\s*=\s*(\d+)'
             ),
             Quantity(
-                'number_of_pw_for_charge',
+                'number_of_pw_for_density',
                 r'SETUP PLANE WAVES FOR CHARGE/POTENTIAL\n\s*number of plane waves\s*=\s*(\d+)'
             ),
             Quantity(
-                'number_of_sticks_for_charge',
+                'number_of_sticks_for_density',
                 r'SETUP PLANE WAVES FOR CHARGE/POTENTIAL\n.*\n\s*number of sticks\s*=\s*(\d+)\n'
             ),
             Quantity(
-                'number_of_pw_for_wavefunction',
-                r'SETUP PLANE WAVES FOR WAVE FUNCTIONS\n\s*number of plane waves\s*=\s*(\d+)'
-            ),
-            Quantity(
-                'number_of_sticks_for_wavefunction',
-                r'SETUP PLANE WAVES FOR WAVE FUNCTIONS\n.*\n\s*number of sticks\s*=\s*(\d+)\n'
-            ),
-            Quantity(
-                'parallel_pw_for_charge',
+                'parallel_pw_for_density',
                 r'PARALLEL PW FOR CHARGE/POTENTIAL\n\s*PROC\s*COLUMNS\(POT\)\s*PW\n([\s\S]+?)\-+',
                 str_operation=str_to_sticks, convert=False
-            ),
-            Quantity(
-                'parallel_pw_for_wavefunction',
-                r'PARALLEL PW FOR WAVE FUNCTIONS\n\s*PROC\s*COLUMNS\(W\)\s*PW\n([\s\S]+?)\-+',
-                str_operation=str_to_sticks, convert=False
-            ),
-            Quantity(
-                'number_of_total_pw',
-                r'number of total plane waves\s*=\s*(\d+)'
             ),
             Quantity(
                 'number_of_g',
@@ -514,6 +507,31 @@ class ABACUSOutParser(TextParser):
             Quantity(
                 'min_g',
                 rf'min \|g\|\s*=\s*({re_float})'
+            ),
+            Quantity(
+                'wavefunction_cutoff',
+                rf'energy cutoff for wavefunc \(unit:Ry\)\s*=\s*({re_float})', unit='rydberg', dtype=float
+            ),
+            Quantity(
+                'wavefunction_fft_grid',
+                r'\[fft grid for wave functions\]\s*=\s*(\d+)[,\s]*(\d+)[,\s]*(\d+)[,\s]*'
+            ),
+            Quantity(
+                'number_of_pw_for_wavefunction',
+                r'SETUP PLANE WAVES FOR WAVE FUNCTIONS\n\s*number of plane waves\s*=\s*(\d+)'
+            ),
+            Quantity(
+                'number_of_sticks_for_wavefunction',
+                r'SETUP PLANE WAVES FOR WAVE FUNCTIONS\n.*\n\s*number of sticks\s*=\s*(\d+)\n'
+            ),
+            Quantity(
+                'parallel_pw_for_wavefunction',
+                r'PARALLEL PW FOR WAVE FUNCTIONS\n\s*PROC\s*COLUMNS\(W\)\s*PW\n([\s\S]+?)\-+',
+                str_operation=str_to_sticks, convert=False
+            ),
+            Quantity(
+                'number_of_total_pw',
+                r'number of total plane waves\s*=\s*(\d+)'
             ),
             Quantity(
                 'total_number_of_nlocal_projectors',
@@ -542,7 +560,7 @@ class ABACUSOutParser(TextParser):
             ),
             Quantity(
                 'orbital_settings',
-                r'SETUP ONE DIMENSIONAL ORBITALS/POTENTIAL\s*([\s\S]+?)\-+',
+                r'SETUP ONE DIMENSIONAL ORBITALS/POTENTIAL\s*([\s\S]+?)SETUP THE TWO-CENTER INTEGRATION TABLES',
                 sub_parser=TextParser(quantities=orbital_quantities), convert=False
             ),
             Quantity(
@@ -666,10 +684,6 @@ class ABACUSOutParser(TextParser):
                 str_operation=str_to_matrix, convert=False, repeats=False,
             ),
             Quantity(
-                'nspin',
-                r'nspin\s*=\s*(\d+)', dtype=int
-            ),
-            Quantity(
                 'k_points',
                 r'minimum distributed K point number\s*=\s*\d+([\s\S]+?DONE : INIT K-POINTS Time)',
                 str_operation=str_to_kpoints,
@@ -769,7 +783,11 @@ class ABACUSOutParser(TextParser):
             ),
             Quantity(
                 'fermi_energy',
-                rf'Fermi energy.*is\s*({re_float})\s*Rydberg', unit='rydberg', dtype=float, repeats=True
+                rf'read in fermi energy\s*=\s*({re_float})', unit='rydberg', dtype=float, repeats=True
+            ),
+            Quantity(
+                'fermi_energy_dos',
+                rf'Fermi energy is\s*({re_float})\s*Rydberg', unit='rydberg', dtype=float, repeats=True
             ),
             Quantity(
                 'ionic_phase',
@@ -840,11 +858,11 @@ class ABACUSOutParser(TextParser):
 
         run_quantities = [
             Quantity(
-                Run.program_version,
+                'program_version',
                 r'Version:\s*(.*)\n', str_operation=lambda x: ''.join(x)
             ),
             Quantity(
-                x_abacus_section_parallel.x_abacus_nproc,
+                'nproc',
                 r'Processor Number is\s*(\d+)\n', dtype=int
             ),
             Quantity(
@@ -852,16 +870,13 @@ class ABACUSOutParser(TextParser):
                 r'Start Time is\s*(.*)\n', str_operation=lambda x: ''.join(x)
             ),
             Quantity(
-                'global_out_dir', r'global_out_dir\s*=\s*(.*)\n',
+                'input_filename', r'global_in_card\s*=\s*(.*)\n',
             ),
             Quantity(
-                xsection_run.x_abacus_input_filename, r'global_in_card\s*=\s*(.*)\n',
+                'pseudopotential_dirname', r'pseudo_dir\s*=\s*([.\w\-\\ ]*?)',
             ),
             Quantity(
-                xsection_run.x_abacus_pseudopotential_dirname, r'pseudo_dir\s*=\s*([.\w\-\\ ]*?)',
-            ),
-            Quantity(
-                xsection_run.x_abacus_basis_set_dirname, r'orbital_dir\s*=\s*([.\w\-\\ ]*?)',
+                'basis_set_dirname', r'orbital_dir\s*=\s*([.\w\-\\ ]*?)',
             ),
             Quantity(
                 'drank', r'DRANK\s*=\s*(\d+)\n', dtype=int
@@ -935,8 +950,7 @@ class ABACUSParser(FairdiParser):
         self._metainfo_env = m_env
         self.out_parser = ABACUSOutParser()
         self.input_parser = ABACUSInputParser()
-        self.dos_parser = DataTextParser()
-        self.bandstructure_parser = DataTextParser()
+        self.tdos_parser = DataTextParser()
 
         self._xc_map = {
             'PWLDA': [
@@ -973,19 +987,66 @@ class ABACUSParser(FairdiParser):
                 {'name': 'HF_X', 'weight': lambda x: 0.25 if x is None else x}],
         }
 
-    def parse_configurations(self):
+    def parse_configurations(self, run):
         sec_run = self.archive.section_run[-1]
+        header = run.get('header', {})
+        nspin = header.get('number_of_spin_channels')
+        nbands = header.get('nbands')
 
+        def parse_bandstructure():
+            sec_nscf = run.get('nonself_consistent')
+            if sec_nscf  is None:
+                return
+            
+            sec_scc = sec_run.section_single_configuration_calculation[-1]
+            sec_k_band = sec_scc.m_create(KBand)
+            sec_k_band.band_structure_kind = 'electronic'
+            
+            # get efermi
+            efermi_Ry = sec_nscf.get('fermi_energy')
+            if efermi_Ry is None:
+                efermi_Ry = sec_nscf.get('fermi_energy_dos')
+            if efermi_Ry:
+                if len(efermi_Ry) != nspin:
+                    efermi_Ry = efermi_Ry*nspin
+                efermi_eV = efermi_Ry.to(units_mapping['eV']).magnitude
+                sec_scc.energy_reference_fermi = efermi_eV.to('joule').magnitude
+            else:
+                return
+
+            band_k_points = []
+            band_energies = []
+            for slabel, data in sec_nscf.get('band_structure').items():
+                for state in data:
+                    if slabel == 'up':
+                        band_k_points.append(state.kpoint.tolist())
+                    band_energies.append(state.energies.tolist())
+            band_energies = np.reshape(band_energies, (nspin, -1, nbands))
+            sec_k_band_segment = sec_k_band.m_create(KBandSegment)
+            sec_k_band_segment.band_k_points = band_k_points
+            sec_k_band_segment.band_energies = band_energies
+
+        def parse_dos():
+            sec_scc = sec_run.section_single_configuration_calculation[-1]
+
+            # parse TDOS file
+            tdos_file = 'TDOS'
+            if tdos_file not in os.listdir(self.out_parser.maindir):
+                return
+            self.tdos_parser.mainfile = os.path.join(self.out_parser.maindir, tdos_file)
+            sec_dos = sec_scc.m_create(Dos)
+            sec_dos.dos_kind = 'electronic'
+            data = self.tdos_parser.data.T
+            energies = data[0]*units_mapping['eV']
+            sec_dos.number_of_dos_values = len(energies)
+            sec_dos.dos_energies = energies
+            sec_dos.dos_values = data[1:]/units_mapping['eV'].to('1/J').magnitude
+
+            #TODO: parse PDOS file
+                
         def parse_scf(iteration):
             sec_scc = sec_run.section_single_configuration_calculation[-1]
             sec_scf = sec_scc.m_create(ScfIteration)
-
-            date_time = iteration.get('start_date_time')
-            if date_time is not None:
-                date_time = datetime.strptime(
-                    date_time.replace(' ', ''), '%a%b%d%H:%M:%S%Y')
-                sec_run.time_run_date_start = (
-                    date_time - datetime(1970, 1, 1)).total_seconds()
 
             # magnetization
             for key in ['magnetization_total', 'magnetization_absolute']:
@@ -998,6 +1059,48 @@ class ABACUSParser(FairdiParser):
         sec_run = self.archive.section_run[-1]
         sec_method = sec_run.m_create(Method)
         header = run.get('header', {})
+
+        # input parameters from INPUT file
+        input_file = 'INPUT'
+        if input_file in os.listdir(self.out_parser.maindir):
+            self.input_parser.mainfile = os.path.join(self.out_parser.maindir, input_file)
+
+        # pw settings
+        for name in ['wavefunction', 'density']:
+            cutoff = header('%s_cutoff' % name)
+            if cutoff is None:
+                continue
+            sec_basis_set = self.archive.section_run[-1].m_create(BasisSetCellDependent)
+            sec_basis_set.basis_set_planewave_cutoff = cutoff
+            sec_basis_set.basis_set_cell_dependent_kind = 'plane_waves'
+            sec_basis_set.basis_set_cell_dependent_name = 'PW_%.1f' % cutoff.magnitude
+
+            sec_method_basis_set = sec_method.m_create(MethodBasisSet)
+            sec_method_basis_set.mapping_section_method_basis_set_cell_associated = sec_basis_set
+            sec_method_basis_set.method_basis_set_kind = name
+
+            for key in ['pw', 'sticks']:
+                val = header.get('number_of_%s_for_%s' % (key, name))
+                setattr(sec_method, 'x_abacus_number_of_%s_for_%s' % (key, name), val)
+
+        # lcao settings
+        orbital_settings = header.get('orbital_settings')
+        if orbital_settings:
+            for key in ['delta_k', 'delta_r', 'dr_uniform', 'rmax', 'kmesh']:
+                val = orbital_settings.get(key)
+                sec_basis_set = sec_method.m_create(x_abacus_section_basis_sets)
+                setattr(sec_basis_set, 'x_abacus_basis_sets_%s' % key, val)
+
+            for orb, i in enumerate(orbital_settings.get('orbital_information')):
+                sec_specie_basis_set = sec_basis_set.m_create(x_abacus_section_specie_basis_set)
+                sec_specie_basis_set.x_abacus_specie_basis_set_filename = header.get('orbital_files')[i]
+                ln_list = []
+                for data in orb:
+                    ln_list.append([data.l, data.n])
+                sec_specie_basis_set.x_abacus_specie_basis_set_ln = ln_list
+                sec_specie_basis_set.x_abacus_specie_basis_set_rcutoff = data.rcut
+                sec_specie_basis_set.x_abacus_specie_basis_set_rmesh = data.nr
+                sec_specie_basis_set.x_abacus_specie_basis_set_number_of_orbitals = len(ln_list)
 
         # atom_kind and pseudopotential settings
         pp_xc = ''
@@ -1057,9 +1160,8 @@ class ABACUSParser(FairdiParser):
     def init_parser(self):
         self.out_parser.mainfile = self.filepath
         self.out_parser.logger = self.logger
-        self.control_parser.logger = self.logger
-        self.dos_parser.logger = self.logger
-        self.bandstructure_parser.logger = self.logger
+        self.input_parser.logger = self.logger
+        self.tdos_parser.logger = self.logger
 
     def parse(self, filepath, archive, logger):
         self.filepath = os.path.abspath(filepath)
@@ -1070,9 +1172,38 @@ class ABACUSParser(FairdiParser):
         self._electronic_structure_method = 'DFT'
         self.init_parser()
 
-        sec_run = self.archive.m_create(Run)
-        sec_run.program_name = 'ABACUS'
-        sec_run.program_basis_set_type = 'numeric AOs'
+        for run in self.out_parser.get('run', []):
+            sec_run = self.archive.m_create(Run)
+            sec_run.program_name = 'ABACUS'
+            sec_run.program_basis_set_type = 'numeric AOs'
+            sec_run.program_version = run.get('program_version')
+
+            # date
+            date_time = run.get('start_date_time')
+            if date_time is not None:
+                date_time = datetime.strptime(
+                    date_time.replace(' ', ''), '%a%b%d%H:%M:%S%Y')
+                sec_run.time_run_date_start = (
+                    date_time - datetime(1970, 1, 1)).total_seconds()
+
+            # parallel
+            sec_parallel = sec_run.m_create(x_abacus_section_parallel)
+            sec_parallel.x_abacus_nproc = run.get('nproc')
+            for key in ['kpar', 'bndpar', 'diago_proc']:
+                val = self.input_parser.get(key)
+                if val is not None:
+                    setattr(sec_parallel, 'x_abacus_%s' % key, val)
+            
+            # input files
+            sec_run.x_abacus_stru_filename = self.input_parser.get('stru_filename', 'STRU')
+            sec_run.x_abacus_kpt_filename = self.input_parser.get('kpt_filename', 'KPT')
+            sec_run.x_abacus_input_filename = run.get('input_filename')
+            for key in ['basis_set_dirname', 'pseudopotential_dirname']:
+                val = run.get(key)
+                if val is not None:
+                    setattr(sec_run, 'x_abacus_%s' % key, val)
+
+            
 
 # TODO: need to convert direct positions to cartesian ones, then thw cartesian ones multiply units bohr
 # symmetry, lattice_vector, rep_vector, position, converted
