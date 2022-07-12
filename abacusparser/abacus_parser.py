@@ -50,11 +50,11 @@ class ABACUSInputParser(TextParser):
         self._quantities = [
             Quantity(
                 'stru_filename',
-                r'\n *stru_file\s*(\w+)', repeats=False,
+                r'\n *stru_file\s*(\S+)', repeats=False,
             ),
             Quantity(
                 'kpt_filename',
-                r'\n *stru_file\s*(\w+)', repeats=False,
+                r'\n *stru_file\s*(\S+)', repeats=False,
             ),
             Quantity(
                 'xc',
@@ -73,16 +73,56 @@ class ABACUSInputParser(TextParser):
                 r'\n *diago_proc\s*(\d+)', repeats=False
             ),
             Quantity(
+                'scf_max_iteration',
+                r'\n *scf_nmax\s*(\d+)', repeats=False
+            ),
+            Quantity(
+                'occupations',
+                r'\n *occupations\s*(\w+)', repeats=False, 
+            ),
+            Quantity(
+                'smearing_kind',
+                r'\n *smearing_method\s*(\w+)', repeats=False, 
+            ),
+            Quantity(
+                'smearing_width',
+                r'\n *smearing_width\s*(\w+)', repeats=False, unit='rydberg'
+            ),
+            Quantity(
+                xsection_method.x_abacus_mixing_method,
+                rf'\n *mixing_type\s*(\w+)', repeats=False
+            ),
+            Quantity(
+                xsection_method.x_abacus_mixing_beta,
+                rf'\n *scf_thr\s*({re_float})', repeats=False
+            ),
+            Quantity(
+                xsection_method.x_abacus_diagonalization_algorithm,
+                rf'\n *ks_solver\s*(\w+)', repeats=False
+            ),
+            Quantity(
+                xsection_method.x_abacus_dispersion_correction_method,
+                r'\n *vdw_method\s*(\S+)', repeats=False, 
+            ),
+            Quantity(
+                xsection_method.x_abacus_gamma_algorithms,
+                rf'\n *gamma_only\s*(\d)', repeats=False
+            ),
+            Quantity(
+                xsection_method.x_abacus_scf_threshold_density,
+                rf'\n *scf_thr\s*({re_float})', repeats=False
+            ),
+            Quantity(
                 xsection_method.x_abacus_initial_magnetization_total,
                 rf'\n *tot_magnetization\s*({re_float})', repeats=False
             ),
             Quantity(
                 xsection_method.x_abacus_hse_omega,
-                rf'\n *tot_magnetization\s*({re_float})', repeats=False
+                rf'\n *exx_hse_omega\s*({re_float})', repeats=False
             ),
             Quantity(
                 xsection_method.x_abacus_hybrid_xc_coeff,
-                rf'\n *tot_magnetization\s*({re_float})', repeats=False
+                rf'\n *exx_hybrid_alpha\s*({re_float})', repeats=False
             ),
         ]
 
@@ -444,7 +484,7 @@ class ABACUSOutParser(TextParser):
             ),
             Quantity(
                 xsection_method.number_of_spin_channels,
-                r'nspin\s*=\s*(\d+)', dtype=int, repeats=False, str_operation=lambda x: 1 if int(x)==4 else x
+                r'nspin\s*=\s*(\d+)', dtype=int, repeats=False
             ),
             Quantity(
                 'sampling_method',
@@ -565,8 +605,11 @@ class ABACUSOutParser(TextParser):
             ),
             Quantity(
                 'allocation_method',
-                r'divide the H&S matrix using [\w ]+ algorithms\.\n([\s\S]+?)\-+',
+                r'divide the H&S matrix using ([\w ]+ algorithms\.\n[\s\S]+?)\-+',
                 sub_parser=TextParser(quantities=[
+                    Quantity(
+                        'method', r'([\w ]+) algorithms'
+                    ),
                     Quantity(
                         'nb2d', r'nb2d\s*=\s*(\d+)', dtype=int
                     ),
@@ -702,10 +745,10 @@ class ABACUSOutParser(TextParser):
                         'density_error', rf'Density error is\s*({re_float})', dtype=float
                     ),
                     Quantity(
-                        'e_ks', rf'E_KohnSham\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
+                        'energy_total_scf_iteration', rf'E_KohnSham\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
                     ),
                     Quantity(
-                        'e_harris', rf'E_Harris\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
+                        'x_abacus_energy_total_harris_foulkes_estimate', rf'E_Harris\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
                     ),
                     Quantity(
                         'e_fermi', rf'E_Fermi\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
@@ -720,7 +763,7 @@ class ABACUSOutParser(TextParser):
                         'e_hartree', rf'E_Hartree\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
                     ),
                     Quantity(
-                        'e_xc', rf'E_xc\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
+                        'energy_XC_scf_iteration', rf'E_xc\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
                     ),
                     Quantity(
                         'e_ewald', rf'E_ewald\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
@@ -990,7 +1033,8 @@ class ABACUSParser(FairdiParser):
     def parse_configurations(self, run):
         sec_run = self.archive.section_run[-1]
         header = run.get('header', {})
-        nspin = header.get('number_of_spin_channels')
+        nspin_ori = header.get('number_of_spin_channels')
+        nspin = 1 if nspin_ori==4 else nspin_ori 
         nbands = header.get('nbands')
 
         def parse_bandstructure():
@@ -1048,22 +1092,79 @@ class ABACUSParser(FairdiParser):
             sec_scc = sec_run.section_single_configuration_calculation[-1]
             sec_scf = sec_scc.m_create(ScfIteration)
 
+            sec_scf.x_abacus_density_change_scf_iteration = iteration.get('density_error')
+            # energies
+            energy_name = ['x_abacus_energy_total_harris_foulkes_estimate', 'energy_total_scf_iteration'
+                            'energy_XC_scf_iteration']
+            for name in energy_name:
+                val = iteration.get(name)
+                if val is None:
+                    continue
+                setattr(sec_scf, name, val.to('joule').magnitude)
+            sec_scf.energy_reference_fermi_iteration = [iteration.get('e_fermi').to('joule').magnitude]*nspin
+
             # magnetization
             for key in ['magnetization_total', 'magnetization_absolute']:
                 val = iteration.get(key)
                 if val is None:
                     continue
-                setattr(sec_scc, 'x_abacus_%s' % key, val[-1].magnitude)
+                setattr(sec_scf, 'x_abacus_%s' % key, val.magnitude)
+
+        def parse_section(section):
+            sec_scc = sec_run.m_create(SingleConfigurationCalculation)
+
+            scf_iterations = section.get('self_consistent').get('iteration')
+            sec_scc.number_of_scf_iterations = len(scf_iterations)
+            for scf_iteration in scf_iterations:
+                parse_scf(scf_iteration)
+            e_vdw = scf_iteration.get('e_vdw', None)
+            if e_vdw:
+                sec_energy_vdw = sec_scc.m_create(EnergyVanDerWaals)
+                sec_energy_vdw.energy_van_der_Waals = e_vdw.to('joule').magnitude
+                vdw_method = self.input_parser.get('x_abacus_dispersion_correction_method')
+                if vdw_method == 'd2':
+                    kind = 'DFT-D2'
+                elif vdw_method == 'd3_0':
+                    kind = 'DFT-D3(0)'
+                elif vdw_method == 'd3_bj':
+                    kind = 'DFT-D3(BJ)'
+                sec_energy_vdw.energy_van_der_Waals_kind = kind
+            
 
     def parse_method(self, run):
         sec_run = self.archive.section_run[-1]
         sec_method = sec_run.m_create(Method)
         header = run.get('header', {})
 
+        # smearing
+        occupations =  self.input_parser.get('occupations', 'smearing')
+        if occupations == 'tetrahedra':
+            sec_method.smearing_kind = occupations
+        elif occupations == 'fixed':
+            sec_method.smearing_kind = 'empty'
+        else:
+            smearing_kind = self.input_parser.get('smearing_kind', 'fixed')
+            if smearing_kind == 'mp':
+                sec_method.smearing_kind = 'methfessel-paxton'
+            elif smearing_kind in ['gauss', 'gaussian']:
+                sec_method.smearing_kind == 'gaussian'
+            else:
+                sec_method.smearing_kind = 'empty'
+        sec_method.smearing_width = self.input_parser.get('smearing_width', 0.001).to('joule').magnitude
+
         # input parameters from INPUT file
         input_file = 'INPUT'
         if input_file in os.listdir(self.out_parser.maindir):
             self.input_parser.mainfile = os.path.join(self.out_parser.maindir, input_file)
+        input_names = ['scf_max_iteration', 'x_abacus_scf_threshold_density', 
+                        'x_abacus_mixing_method', 'x_abacus_mixing_beta', 'x_abacus_gamma_algorithms', 
+                        'x_abacus_diagonalization_algorithm', 'x_abacus_initial_magnetization_total'
+                        'x_abacus_dispersion_correction_method']
+        for key in input_names:
+            val = header.get(key)
+            if val is None:
+                continue
+            setattr(sec_method, key, val)
 
         # pw settings
         for name in ['wavefunction', 'density']:
@@ -1093,7 +1194,7 @@ class ABACUSParser(FairdiParser):
 
             for orb, i in enumerate(orbital_settings.get('orbital_information')):
                 sec_specie_basis_set = sec_basis_set.m_create(x_abacus_section_specie_basis_set)
-                sec_specie_basis_set.x_abacus_specie_basis_set_filename = header.get('orbital_files')[i]
+                sec_specie_basis_set.x_abacus_specie_basis_set_filename = os.path.basename(header.get('orbital_files')[i])
                 ln_list = []
                 for data in orb:
                     ln_list.append([data.l, data.n])
@@ -1101,6 +1202,17 @@ class ABACUSParser(FairdiParser):
                 sec_specie_basis_set.x_abacus_specie_basis_set_rcutoff = data.rcut
                 sec_specie_basis_set.x_abacus_specie_basis_set_rmesh = data.nr
                 sec_specie_basis_set.x_abacus_specie_basis_set_number_of_orbitals = len(ln_list)
+
+        # TODO identify if dft+u
+        sec_method.electronic_structure_method = 'DFT'
+
+        # spin mode
+        nspin_ori = header.get('number_of_spin_channels')
+        nspin = 1 if nspin_ori==4 else nspin_ori
+        sec_method.number_of_spin_channels = nspin
+        sec_method.x_abacus_spin_orbit = nspin_ori==4
+        sec_method.x_abacus_noncollinear = True if header.get('atom_data')[-1].get('noncollinear_magnetization') else False
+        sec_method.relativity_method = ('full' if nspin_ori==4 else 'scalar')+' relativistic'
 
         # atom_kind and pseudopotential settings
         pp_xc = ''
@@ -1177,6 +1289,7 @@ class ABACUSParser(FairdiParser):
             sec_run.program_name = 'ABACUS'
             sec_run.program_basis_set_type = 'numeric AOs'
             sec_run.program_version = run.get('program_version')
+            header = run.get('header', {})
 
             # date
             date_time = run.get('start_date_time')
@@ -1193,6 +1306,10 @@ class ABACUSParser(FairdiParser):
                 val = self.input_parser.get(key)
                 if val is not None:
                     setattr(sec_parallel, 'x_abacus_%s' % key, val)
+            for key in ['method', 'nb2d', 'trace_loc_row', 'trace_loc_col', 'nloc']:
+                val = header.get(key)
+                if val is not None:
+                    setattr(sec_parallel, 'x_abacus_allocation_%s' % key, val)
             
             # input files
             sec_run.x_abacus_stru_filename = self.input_parser.get('stru_filename', 'STRU')

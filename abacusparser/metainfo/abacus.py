@@ -25,6 +25,7 @@ from nomad.metainfo import (  # pylint: disable=unused-import
 from nomad.metainfo.legacy import LegacyDefinition
 
 from nomad.datamodel.metainfo import public
+from nomad.datamodel.metainfo import common
 
 m_package = Package(
     name='abacus_nomadmetainfo_json',
@@ -94,6 +95,51 @@ class x_abacus_section_parallel(MSection):
         categories=[public.settings_run, x_abacus_input_settings],
         a_legacy=LegacyDefinition(name='x_abacus_diago_proc'))
 
+    x_abacus_allocation_method = Quantity(
+        type=str,
+        shape=[],
+        description='''
+        The algorithms of dividing the H&S matrix
+        ''',
+        categories=[public.settings_run, x_abacus_output_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_allocation_method'))
+
+    x_abacus_allocation_nb2d = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[public.settings_run, x_abacus_output_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_allocation_nb2d'))
+
+    x_abacus_allocation_trace_loc_row = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[public.settings_run, x_abacus_output_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_allocation_trace_loc_row'))
+
+    x_abacus_allocation_trace_loc_col = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[public.settings_run, x_abacus_output_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_allocation_trace_loc_col'))
+
+    x_abacus_allocation_nloc = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[public.settings_run, x_abacus_output_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_allocation_nloc'))
+    
 
 class x_abacus_section_specie_basis_set(MSection):
     '''
@@ -209,6 +255,7 @@ class x_abacus_section_basis_sets(MSection):
         repeats=True,
         a_legacy=LegacyDefinition(name='x_abacus_section_specie_basis_set'))
 
+
 class section_single_configuration_calculation(public.section_single_configuration_calculation):
 
     x_abacus_md_step_input = Quantity(
@@ -230,22 +277,6 @@ class section_single_configuration_calculation(public.section_single_configurati
         categories=[public.settings_molecular_dynamics,
                     x_abacus_output_settings],
         a_legacy=LegacyDefinition(name='x_abacus_md_step_output'))
-
-    x_abacus_magnetization_total = Quantity(
-        type=np.dtype(np.float64),
-        shape=[],
-        description='''
-        Total per-cell magnetization
-        ''',
-        a_legacy=LegacyDefinition(name='x_qe_magnetization_total'))
-
-    x_abacus_magnetization_absolute = Quantity(
-        type=np.dtype(np.float64),
-        shape=[],
-        description='''
-        Absolute per-cell magnetization
-        ''',
-        a_legacy=LegacyDefinition(name='x_qe_magnetization_absolute'))
 
 
 class section_run(public.section_run):
@@ -342,6 +373,25 @@ class section_method(public.section_method):
         categories=[x_abacus_input_settings],
         a_legacy=LegacyDefinition(name='x_abacus_initial_magnetization_total'))
 
+    x_abacus_chg_extrap = Quantity(
+        type=str,
+        shape=[],
+        description='''
+        Methods to do extrapolation of density when ABACUS is doing geometry relaxations
+        ''',
+        categories=[public.settings_molecular_dynamics,
+                    public.settings_geometry_optimization, x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_chg_extrap'))
+
+    x_abacus_sto_method = Quantity(
+        type=str,
+        shape=[],
+        description='''
+        Methods to do SDFT
+        ''',
+        categories=[x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_sto_method'))
+
     x_abacus_diagonalization_algorithm = Quantity(
         type=str,
         shape=[],
@@ -360,33 +410,23 @@ class section_method(public.section_method):
         categories=[public.settings_van_der_Waals, x_abacus_input_settings],
         a_legacy=LegacyDefinition(name='x_abacus_dispersion_correction_method'))
 
-    x_abacus_occupations_method = Quantity(
-        type=str,
+    x_abacus_spin_orbit = Quantity(
+        type=bool,
         shape=[],
         description='''
-        Specifies how to calculate the occupations of bands.
+        Spin-orbit coupling flag: with/without spin-orbit
         ''',
-        categories=[public.settings_smearing, x_abacus_input_settings],
-        a_legacy=LegacyDefinition(name='x_abacus_occupations_method'))
+        categories=[x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_spin_orbit'))
 
-    x_abacus_smearing_method = Quantity(
-        type=str,
+    x_abacus_noncollinear = Quantity(
+        type=bool,
         shape=[],
         description='''
-        It indicates which occupation and smearing method is used in the calculation
+        Noncollinear spin mode
         ''',
-        categories=[public.settings_smearing, x_abacus_input_settings],
-        a_legacy=LegacyDefinition(name='x_abacus_smearing_method'))
-
-    x_abacus_smearing_sigma = Quantity(
-        type=np.dtype(np.float64),
-        shape=[],
-        unit='rydberg',
-        description='''
-        Energy range for smearing
-        ''',
-        categories=[public.settings_smearing, x_abacus_input_settings],
-        a_legacy=LegacyDefinition(name='x_abacus_smearing_sigma'))
+        categories=[x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_noncollinear'))
 
     x_abacus_mixing_method = Quantity(
         type=str,
@@ -412,45 +452,17 @@ class section_method(public.section_method):
         description='''
         Usage of gamma-only optimized algorithms
         ''',
-        categories=[public.settings_scf, x_abacus_input_settings],
+        categories=[x_abacus_input_settings],
         a_legacy=LegacyDefinition(name='x_abacus_gamma_algorithms'))
 
-    x_abacus_scf_nmax = Quantity(
-        type=np.dtype(np.int32),
-        shape=[],
-        description='''
-        This variable indicates the maximal iteration number for electronic iterations.
-        ''',
-        categories=[public.settings_scf, x_abacus_input_settings],
-        a_legacy=LegacyDefinition(name='x_abacus_scf_nmax'))
-
-    x_abacus_scf_thr = Quantity(
+    x_abacus_scf_threshold_density = Quantity(
         type=np.dtype(np.float64),
         shape=[],
         description='''
-        The threshold for electronic iteration
+        The density threshold for electronic iteration
         ''',
         categories=[public.settings_scf, x_abacus_input_settings],
-        a_legacy=LegacyDefinition(name='x_abacus_scf_thr'))
-
-    x_abacus_chg_extrap = Quantity(
-        type=str,
-        shape=[],
-        description='''
-        Methods to do extrapolation of density when ABACUS is doing geometry relaxations
-        ''',
-        categories=[public.settings_molecular_dynamics,
-                    public.settings_geometry_optimization, x_abacus_input_settings],
-        a_legacy=LegacyDefinition(name='x_abacus_chg_extrap'))
-
-    x_abacus_sto_method = Quantity(
-        type=str,
-        shape=[],
-        description='''
-        Methods to do SDFT
-        ''',
-        categories=[x_abacus_input_settings],
-        a_legacy=LegacyDefinition(name='x_abacus_sto_method'))
+        a_legacy=LegacyDefinition(name='x_abacus_scf_threshold_density'))
 
     x_abacus_xc_functional = Quantity(
         type=str,
@@ -531,6 +543,7 @@ class section_method(public.section_method):
         repeats=True,
         a_legacy=LegacyDefinition(name='x_abacus_section_basis_sets'))
 
+
 class section_system(public.section_system):
 
     m_def = Section(validate=False, extends_base_section=True,
@@ -606,5 +619,46 @@ class section_method_atom_kind(public.section_method_atom_kind):
         Number of projectors in pseudopotential
         ''',
         a_legacy=LegacyDefinition(name='x_abacus_pp_nprojectors'))
+
+
+class section_scf_iteration(public.section_scf_iteration):
+
+    m_def = Section(validate=False, extends_base_section=True, a_legacy=LegacyDefinition(name='section_scf_iteration'))
+
+    x_abacus_density_change_scf_iteration = Quantity(
+        type=np.dtype(np.float64),
+        shape=[],
+        description='''
+        Stores the change of charge density with respect to the previous self-consistent
+        field (SCF) iteration.
+        ''',
+        categories=[common.ErrorEstimateContribution],
+        a_legacy=LegacyDefinition(name='x_abacus_density_change_scf_iteration'))
+
+    x_abacus_energy_total_harris_foulkes_estimate = Quantity(
+        type=np.dtype(np.float64),
+        shape=[],
+        description='''
+        Stores the change of charge density with respect to the previous self-consistent
+        field (SCF) iteration.
+        ''',
+        categories=[common.EnergyComponent, common.EnergyValue, common.EnergyTotalPotential],
+        a_legacy=LegacyDefinition(name='x_abacus_energy_total_harris_foulkes_estimate'))
+
+    x_abacus_magnetization_total = Quantity(
+        type=np.dtype(np.float64),
+        shape=[],
+        description='''
+        Total per-cell magnetization
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_magnetization_total'))
+
+    x_abacus_magnetization_absolute = Quantity(
+        type=np.dtype(np.float64),
+        shape=[],
+        description='''
+        Absolute per-cell magnetization
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_magnetization_absolute'))
 
 m_package.__init_metainfo__()
