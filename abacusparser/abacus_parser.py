@@ -32,7 +32,7 @@ from nomad.datamodel.metainfo.common_dft import Run, Method, System, XCFunctiona
     ScfIteration, SingleConfigurationCalculation, SamplingMethod, FrameSequence, Eigenvalues,\
     Dos, AtomProjectedDos, SpeciesProjectedDos, KBand, KBandSegment, EnergyVanDerWaals,\
     BasisSetCellDependent, MethodBasisSet, MethodAtomKind, CalculationToCalculationRefs,\
-    MethodToMethodRefs, AtomType
+    MethodToMethodRefs, AtomType, Symmetry
 from .metainfo.abacus import section_run as xsection_run, section_method as xsection_method,\
     x_abacus_section_parallel, x_abacus_section_basis_sets, x_abacus_section_specie_basis_set
 
@@ -55,6 +55,10 @@ class ABACUSInputParser(TextParser):
             Quantity(
                 'kpt_filename',
                 r'\n *stru_file\s*(\S+)', repeats=False,
+            ),
+            Quantity(
+                'x_abacus_init_velocities',
+                r'\n *init_vel\s*(\d+)', repeats=False,
             ),
             Quantity(
                 'xc',
@@ -140,7 +144,7 @@ class ABACUSOutParser(TextParser):
             elif len(val) == 8:
                 labels, x, y, z, mag, vx, vy, vz = val
                 data['velocities'] = np.array(
-                    [vx, vy, vz], dtype=float) * units_mapping['A'] / units_mapping['fs']
+                    [vx, vy, vz], dtype=float)
             data['labels'] = labels
             data['positions'] = np.array([x, y, z], dtype=float)
             data['magnetic_moments'] = float(mag)
@@ -335,7 +339,7 @@ class ABACUSOutParser(TextParser):
             ),
             Quantity(
                 'bravais_name',
-                r'BRAVAIS\s*=\s*([\w ]+)', str_operation=lambda x:x
+                r'BRAVAIS LATTICE NAME\s*=\s*([.\w\(\)\- ]+)', str_operation=lambda x:x
             ),
             Quantity(
                 'ibrav',
@@ -350,7 +354,7 @@ class ABACUSOutParser(TextParser):
                 r'PURE POINT GROUP OPERATIONS\s*=\s*(\d+)'
             ),
             Quantity(
-                'number_of_space_group_operations',
+                'number_of_point_group_operations',
                 r'SPACE GROUP OPERATIONS\s*=\s*(\d+)'
             ),
             Quantity(
@@ -465,8 +469,7 @@ class ABACUSOutParser(TextParser):
                      rf'PAO radial cut off \(Bohr\)\s*=\s*({re_float})', unit='bohr', dtype=float, repeats=False),
             Quantity(
                 'number_of_electrons',
-                rf'total electron number of element (\w+)\s*=\s*(\d+)', repeats=True,
-                str_operation=str_to_dict, convert=False
+                rf'total electron number of element (\w+)\s*=\s*(\d+)', repeats=True, convert=False
             ),
             Quantity(
                 'occupied_bands',
@@ -678,11 +681,11 @@ class ABACUSOutParser(TextParser):
                 str_operation=str_to_energy_occupation, convert=False
             ),
             Quantity(
-                'fermi_energy',
+                'reference_fermi',
                 rf'EFERMI\s*=\s*({re_float})\s*eV', unit='eV', dtype=float
             ),
             Quantity(
-                'energies',
+                'total',
                 rf'\s*final etot is\s*({re_float})\s*eV', unit='eV', dtype=float
             ),
             Quantity(
@@ -760,10 +763,10 @@ class ABACUSOutParser(TextParser):
                         'e_one_elec', rf'E_one_elec\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
                     ),
                     Quantity(
-                        'e_hartree', rf'E_Hartree\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
+                        'correction_hartree', rf'E_Hartree\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
                     ),
                     Quantity(
-                        'energy_XC_scf_iteration', rf'E_xc\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
+                        'XC_functional', rf'E_xc\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
                     ),
                     Quantity(
                         'e_ewald', rf'E_ewald\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
@@ -778,7 +781,7 @@ class ABACUSOutParser(TextParser):
                         'e_efield', rf'E_efield\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
                     ),
                     Quantity(
-                        'e_exx', rf'E_exx\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
+                        'hartree_fock_X_scaled', rf'E_exx\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
                     ),
                     Quantity(
                         'e_vdw', rf'E_vdwD\d+\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
@@ -860,7 +863,8 @@ class ABACUSOutParser(TextParser):
             ),
             Quantity(
                 'self_consistent',
-                r'((STEP OF ION RELAXATION\s*:\s*\d+|RELAX IONS\s*:\s*\d+\s*\(in total: \d+\))[\s\S]+?(?:Setup the structure|\!FINAL_ETOT_IS))', sub_parser=TextParser(quantities=scf_quantities)
+                r'((STEP OF ION RELAXATION\s*:\s*\d+|RELAX IONS\s*:\s*\d+\s*\(in total: \d+\))[\s\S]+?(?:Setup the structure|\!FINAL_ETOT_IS))', 
+                repeats=True, sub_parser=TextParser(quantities=scf_quantities)
             )
         ]
 
@@ -870,22 +874,23 @@ class ABACUSOutParser(TextParser):
             ),
             Quantity(
                 'self_consistent',
-                r'(STEP OF MOLECULAR DYNAMICS\s*:\s*\d+[\s\S]+?Energy\s*Potential\s*Kinetic)', sub_parser=TextParser(quantities=scf_quantities)
+                r'(STEP OF MOLECULAR DYNAMICS\s*:\s*\d+[\s\S]+?Energy\s*Potential\s*Kinetic)', 
+                repeats=True, sub_parser=TextParser(quantities=scf_quantities)
             ),
             Quantity(
                 'energy',
                 rf'Energy\s*Potential\s*Kinetic\s*Temperature\s*(?:Pressure \(KBAR\)\s*\n|\n)\s*({re_float})',
-                dtype=float, unit='rydberg'
+                dtype=float, unit='hartree'
             ),
             Quantity(
                 'potential',
                 rf'Energy\s*Potential\s*Kinetic\s*Temperature\s*(?:Pressure \(KBAR\)\s*\n|\n)\s*{re_float}\s*({re_float})',
-                dtype=float, unit='rydberg'
+                dtype=float, unit='hartree'
             ),
             Quantity(
                 'kinetic',
                 rf'Energy\s*Potential\s*Kinetic\s*Temperature\s*(?:Pressure \(KBAR\)\s*\n|\n)\s*{re_float}\s*{re_float}\s*({re_float})',
-                dtype=float, unit='rydberg'
+                dtype=float, unit='hartree'
             ),
             Quantity(
                 'temperature',
@@ -1094,8 +1099,7 @@ class ABACUSParser(FairdiParser):
 
             sec_scf.x_abacus_density_change_scf_iteration = iteration.get('density_error')
             # energies
-            energy_name = ['x_abacus_energy_total_harris_foulkes_estimate', 'energy_total_scf_iteration'
-                            'energy_XC_scf_iteration']
+            energy_name = ['x_abacus_energy_total_harris_foulkes_estimate', 'energy_total_scf_iteration']
             for name in energy_name:
                 val = iteration.get(name)
                 if val is None:
@@ -1110,9 +1114,76 @@ class ABACUSParser(FairdiParser):
                     continue
                 setattr(sec_scf, 'x_abacus_%s' % key, val.magnitude)
 
+        def parse_system():
+            sec_system = sec_run.m_create(System)
+            structure = header.get('positions')
+
+            # structure
+            alat = header.get('alat')
+            sec_system.x_abacus_alat = alat
+            lattice_vectors = header.get('lattice_vectors')*alat
+            sec_system.lattice_vectors = lattice_vectors.to('meter').magnitude
+            sec_system.simulation_cell = lattice_vectors.to('meter').magnitude
+
+            sites = structure.get('sites')
+            labels = [],
+            positions = [],
+            mags = []
+            velocities = []
+            sec_run.x_abacus_init_velocities = self.input_parser.get('x_abacus_init_velocities', 0)
+            for site in site:
+                labels.append(sites['labels'])
+                positions.append(sites['positions'])
+                mags.append(sites['mags'])
+                if sec_run.x_abacus_init_velocities:
+                    velocities.append(sites['velocities'])
+
+            coord_class = structure.get('coord_class')
+            if coord_class == 'cartesian':
+                units = structure.get('units')
+                sec_system.atom_positions = np.array(positions)*units.to('meter').magnitude
+            elif coord_class == 'direct':
+                sec_system.atom_positions = (np.array(positions)@lattice_vectors).to('meter').magnitude
+            sec_system.atom_labels = labels
+            if velocities:
+                sec_system.atom_velocities = (np.array(velocities)*units_mapping['A']/units_mapping['fs']).to('meter / second').magnitude
+
+            sec_system.x_abacus_cell_volume = header.get('cell_volume')
+
+            # symmetry
+            symmetry = header.get('symmetry')
+            if symmetry:
+                sec_system_sym = sec_system.m_create(Symmetry)
+                sec_system_sym.crystal_system = symmetry.get('bravais_name')[1].lower()
+                brav_dict = {'triclinic': 'a', 'monoclinic': 'b', 'orthorhombic': 'o',
+                        'tetragonal': 't', 'hexagonal': 'h', 'cubic': 'c', 'rhombohedral': 'R'}
+                ibrav = symmetry.get('ibrav')
+                if ibrav:
+                    sec_system.x_abacus_ibrav = ibrav
+                    if ibrav in [4, 14]:
+                        sec_system_sym.bravais_lattice = brav_dict[sec_system_sym.crystal_system]
+                    else:
+                        sec_system_sym.bravais_lattice = brav_dict[sec_system_sym.crystal_system]+symmetry.get('bravais_name')[2][0]
+                sec_system.x_abacus_point_group_schoenflies_name = symmetry.get('point_group')
+                sec_system.x_abacus_celldm = [symmetry.get('norm_a')*alat, symmetry.get('norm_b')*alat, symmetry.get('norm_c')*alat, 
+                                            symmetry.get('alpha'), symmetry.get('beta'), symmetry.get('gamma')]
+                for name in ['rotation_matrices', 'point_group_operations', 'point_group_operations']:
+                    val = symmetry.get('number_of_%s' % name)
+                    setattr(sec_system, 'x_abacus_number_of_%s' % name, val)
+
+            # numbers
+            sec_system.number_of_atoms = header.get('number_of_atoms')
+            for name in ['number_or_species', 'number_of_electrons']:
+                val = header.get(name)
+                setattr(sec_system, 'x_abacus_%s' % name, val)
+
         def parse_section(section):
             sec_scc = sec_run.m_create(SingleConfigurationCalculation)
 
+            # atom data
+            parse_system()
+
+            # energies
             scf_iterations = section.get('self_consistent').get('iteration')
             sec_scc.number_of_scf_iterations = len(scf_iterations)
             for scf_iteration in scf_iterations:
@@ -1129,7 +1200,34 @@ class ABACUSParser(FairdiParser):
                 elif vdw_method == 'd3_bj':
                     kind = 'DFT-D3(BJ)'
                 sec_energy_vdw.energy_van_der_Waals_kind = kind
-            
+            for key in ['XC_functional', 'correction_hartree', 'hartree_fock_X_scaled'
+            'total', 'reference_fermi']:
+                val = section.get(key)
+                if key == 'reference_fermi':
+                    val = [val]*nspin
+                setattr(sec_scc, 'energy_%s' % key, val.to('joule').magnitude)
+
+            # eigenvalues
+            eigenvalues = section.get('self_consistent').get('energy_occupation')
+            if eigenvalues is not None:
+                sec_eigenvalues = sec_scc.m_create(Eigenvalues)
+                
+
+        # scf
+        if run.get('self_consistent', None):
+            parse_section(run)
+        
+        # relax/cell-relax
+        for section in run.get('geometry_optimization', []):
+            parse_section(section)
+
+        # md 
+        for section in run.get('molecular_dynamics', []):
+            parse_section(section)
+
+        # nscf
+        parse_bandstructure()
+        parse_dos()
 
     def parse_method(self, run):
         sec_run = self.archive.section_run[-1]

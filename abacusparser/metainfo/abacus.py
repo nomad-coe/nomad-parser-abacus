@@ -42,15 +42,6 @@ class x_abacus_input_settings(MCategory):
         a_legacy=LegacyDefinition(name='x_abacus_input_settings'))
 
 
-class x_abacus_output_settings(MCategory):
-    '''
-    Parameters of ABACUS output of parsed INPUT.
-    '''
-
-    m_def = Category(
-        a_legacy=LegacyDefinition(name='x_abacus_output_settings'))
-
-
 class x_abacus_section_parallel(MSection):
     '''
     section for run-time parallization options of ABACUS
@@ -101,7 +92,7 @@ class x_abacus_section_parallel(MSection):
         description='''
         The algorithms of dividing the H&S matrix
         ''',
-        categories=[public.settings_run, x_abacus_output_settings],
+        categories=[public.settings_run],
         a_legacy=LegacyDefinition(name='x_abacus_allocation_method'))
 
     x_abacus_allocation_nb2d = Quantity(
@@ -110,7 +101,7 @@ class x_abacus_section_parallel(MSection):
         description='''
         -
         ''',
-        categories=[public.settings_run, x_abacus_output_settings],
+        categories=[public.settings_run],
         a_legacy=LegacyDefinition(name='x_abacus_allocation_nb2d'))
 
     x_abacus_allocation_trace_loc_row = Quantity(
@@ -119,7 +110,7 @@ class x_abacus_section_parallel(MSection):
         description='''
         -
         ''',
-        categories=[public.settings_run, x_abacus_output_settings],
+        categories=[public.settings_run],
         a_legacy=LegacyDefinition(name='x_abacus_allocation_trace_loc_row'))
 
     x_abacus_allocation_trace_loc_col = Quantity(
@@ -128,7 +119,7 @@ class x_abacus_section_parallel(MSection):
         description='''
         -
         ''',
-        categories=[public.settings_run, x_abacus_output_settings],
+        categories=[public.settings_run],
         a_legacy=LegacyDefinition(name='x_abacus_allocation_trace_loc_col'))
 
     x_abacus_allocation_nloc = Quantity(
@@ -137,7 +128,7 @@ class x_abacus_section_parallel(MSection):
         description='''
         -
         ''',
-        categories=[public.settings_run, x_abacus_output_settings],
+        categories=[public.settings_run],
         a_legacy=LegacyDefinition(name='x_abacus_allocation_nloc'))
     
 
@@ -163,6 +154,7 @@ class x_abacus_section_specie_basis_set(MSection):
         description='''
         -
         ''',
+        categories=[x_abacus_input_settings, public.basis_set_description],
         a_legacy=LegacyDefinition(name='x_abacus_specie_basis_set_ln'))
 
     x_abacus_specie_basis_set_rmesh = Quantity(
@@ -171,7 +163,7 @@ class x_abacus_section_specie_basis_set(MSection):
         description='''
         -
         ''',
-        categories=[x_abacus_input_settings],
+        categories=[x_abacus_input_settings, public.basis_set_description],
         a_legacy=LegacyDefinition(name='x_abacus_specie_basis_set_rmesh'))
 
     x_abacus_specie_basis_set_rcutoff = Quantity(
@@ -181,7 +173,7 @@ class x_abacus_section_specie_basis_set(MSection):
         description='''
         -
         ''',
-        categories=[x_abacus_input_settings],
+        categories=[x_abacus_input_settings, public.basis_set_description],
         a_legacy=LegacyDefinition(name='x_abacus_specie_basis_set_rcutoff'))
 
     x_abacus_specie_basis_set_number_of_orbitals = Quantity(
@@ -190,6 +182,7 @@ class x_abacus_section_specie_basis_set(MSection):
         description='''
         -
         ''',
+        categories=[public.basis_set_description],
         a_legacy=LegacyDefinition(name='x_abacus_specie_basis_set_number_of_orbitals'))
 
 
@@ -208,7 +201,7 @@ class x_abacus_section_basis_sets(MSection):
         description='''
         -
         ''',
-        categories=[x_abacus_output_settings],
+        categories=[public.basis_set_description],
         a_legacy=LegacyDefinition(name='x_abacus_basis_sets_delta_k'))
 
     x_abacus_basis_sets_delta_r = Quantity(
@@ -218,7 +211,7 @@ class x_abacus_section_basis_sets(MSection):
         description='''
         -
         ''',
-        categories=[x_abacus_input_settings],
+        categories=[x_abacus_input_settings, public.basis_set_description],
         a_legacy=LegacyDefinition(name='x_abacus_basis_sets_delta_r'))
 
     x_abacus_basis_sets_dr_uniform = Quantity(
@@ -228,7 +221,7 @@ class x_abacus_section_basis_sets(MSection):
         description='''
         -
         ''',
-        categories=[x_abacus_input_settings],
+        categories=[x_abacus_input_settings, public.basis_set_description],
         a_legacy=LegacyDefinition(name='x_abacus_basis_sets_dr_uniform'))
 
     x_abacus_basis_sets_rmax = Quantity(
@@ -238,7 +231,7 @@ class x_abacus_section_basis_sets(MSection):
         description='''
         -
         ''',
-        categories=[x_abacus_input_settings],
+        categories=[x_abacus_input_settings, public.basis_set_description],
         a_legacy=LegacyDefinition(name='x_abacus_basis_sets_rmax'))
 
     x_abacus_basis_sets_kmesh = Quantity(
@@ -247,7 +240,7 @@ class x_abacus_section_basis_sets(MSection):
         description='''
         -
         ''',
-        categories=[x_abacus_output_settings],
+        categories=[public.basis_set_description],
         a_legacy=LegacyDefinition(name='x_abacus_basis_sets_kmesh'))
 
     x_abacus_section_specie_basis_set = SubSection(
@@ -257,6 +250,16 @@ class x_abacus_section_basis_sets(MSection):
 
 
 class section_single_configuration_calculation(public.section_single_configuration_calculation):
+
+    x_abacus_init_velocities = Quantity(
+        type=bool,
+        shape=[],
+        description='''
+        Initialize velocities?
+        ''',
+        categories=[public.settings_molecular_dynamics,
+                    x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_init_velocities'))
 
     x_abacus_md_step_input = Quantity(
         type=np.dtype(np.int32),
@@ -274,8 +277,7 @@ class section_single_configuration_calculation(public.section_single_configurati
         description='''
         -
         ''',
-        categories=[public.settings_molecular_dynamics,
-                    x_abacus_output_settings],
+        categories=[public.settings_molecular_dynamics],
         a_legacy=LegacyDefinition(name='x_abacus_md_step_output'))
 
 
@@ -480,7 +482,6 @@ class section_method(public.section_method):
         description='''
         Radial cut-off of pseudo atomic orbital
         ''',
-        categories=[x_abacus_output_settings],
         a_legacy=LegacyDefinition(name='x_abacus_pao_radial_cutoff'))
 
     x_abacus_hse_omega = Quantity(
@@ -508,7 +509,7 @@ class section_method(public.section_method):
         description='''
         -
         ''',
-        categories=[x_abacus_output_settings, public.basis_set_description],
+        categories=[public.basis_set_description],
         a_legacy=LegacyDefinition(name='x_abacus_number_of_pw_for_wavefunction'))
 
     x_abacus_number_of_sticks_for_wavefunction = Quantity(
@@ -517,7 +518,7 @@ class section_method(public.section_method):
         description='''
         -
         ''',
-        categories=[x_abacus_output_settings, public.basis_set_description],
+        categories=[public.basis_set_description],
         a_legacy=LegacyDefinition(name='x_abacus_number_of_sticks_for_wavefunction'))
 
     x_abacus_number_of_pw_for_density = Quantity(
@@ -526,7 +527,7 @@ class section_method(public.section_method):
         description='''
         -
         ''',
-        categories=[x_abacus_output_settings, public.basis_set_description],
+        categories=[public.basis_set_description],
         a_legacy=LegacyDefinition(name='x_abacus_number_of_pw_for_density'))
 
     x_abacus_number_of_sticks_for_density = Quantity(
@@ -535,7 +536,7 @@ class section_method(public.section_method):
         description='''
         -
         ''',
-        categories=[x_abacus_output_settings, public.basis_set_description],
+        categories=[public.basis_set_description],
         a_legacy=LegacyDefinition(name='x_abacus_number_of_sticks_for_density'))
 
     x_abacus_section_basis_sets = SubSection(
@@ -549,40 +550,78 @@ class section_system(public.section_system):
     m_def = Section(validate=False, extends_base_section=True,
                     a_legacy=LegacyDefinition(name='section_system'))
 
-    x_abacus_lattice_name_input = Quantity(
-        type=str,
+    x_abacus_alat = Quantity(
+        type=np.dtype(np.float64),
+        unit='bohr',
         shape=[],
         description='''
-        Specifies the type of Bravias lattice in INPUT.
+        Lattice Parameter 'a', constant during a run and used as unit in other quantities
         ''',
-        categories=[x_abacus_input_settings],
-        a_legacy=LegacyDefinition(name='x_abacus_lattice_name_input'))
+        categories=[public.configuration_core],
+        a_legacy=LegacyDefinition(name='x_abacus_alat'))
 
-    x_abacus_lattice_name_output = Quantity(
-        type=str,
-        shape=[],
-        description='''
-        The type of Bravias lattice checked by ABACUS when open symmetry calculation.
-        ''',
-        a_legacy=LegacyDefinition(name='x_abacus_lattice_name_output'))
-
-    x_abacus_number_of_electrons_input = Quantity(
+    x_abacus_ibrav = Quantity(
         type=np.dtype(np.int32),
         shape=[],
         description='''
-        This denotes total number of electrons in the system set in INPUT.
+        Bravais lattice index, constant during a run
         ''',
-        categories=[x_abacus_input_settings, public.configuration_core],
-        a_legacy=LegacyDefinition(name='x_abacus_number_of_electrons_input'))
+        categories=[public.configuration_core],
+        a_legacy=LegacyDefinition(name='x_abacus_ibrav'))
 
-    x_abacus_number_of_electrons_output = Quantity(
+    x_abacus_point_group_schoenflies_name = Quantity(
+        type=str,
+        shape=[],
+        description='''
+        The Schoenflies name of the point group
+        ''',
+        categories=[public.configuration_core],
+        a_legacy=LegacyDefinition(name='x_abacus_point_group_schoenflies_name'))
+
+    x_abacus_celldm = Quantity(
+        type=np.dtype(np.float64),
+        shape=[6],
+        description='''
+        Cell dimension
+        ''',
+        categories=[public.configuration_core],
+        a_legacy=LegacyDefinition(name='x_abacus_celldm'))
+
+    x_abacus_ibrav = Quantity(
         type=np.dtype(np.int32),
         shape=[],
         description='''
-        This denotes total number of electrons in the system calculated by ABACUS.
+        Bravais lattice index, constant during a run
         ''',
-        categories=[x_abacus_output_settings, public.configuration_core],
-        a_legacy=LegacyDefinition(name='x_abacus_number_of_electrons_output'))
+        categories=[public.configuration_core],
+        a_legacy=LegacyDefinition(name='x_abacus_ibrav'))
+
+    x_abacus_number_of_electrons = Quantity(
+        type=np.dtype(np.int32),
+        shape=['x_abacus_number_of_species'],
+        description='''
+        This denotes number of electrons of each element in the system
+        ''',
+        categories=[public.configuration_core],
+        a_legacy=LegacyDefinition(name='x_abacus_total_number_of_electrons'))
+
+    x_abacus_number_of_species = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        This denotes total number of species in the system
+        ''',
+        categories=[public.configuration_core],
+        a_legacy=LegacyDefinition(name='x_abacus_number_of_species'))
+
+    x_abacus_cell_volume = Quantity(
+        type=np.dtype(np.float64),
+        unit='bohr**3',
+        shape=[],
+        description='''
+        Volume of unit cell
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_cell_volume'))
 
 
 class section_method_atom_kind(public.section_method_atom_kind):
