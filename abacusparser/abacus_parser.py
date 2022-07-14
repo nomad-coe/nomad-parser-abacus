@@ -21,7 +21,7 @@ import re
 import os
 import logging
 import numpy as np
-from collections import namedtuple, OrderedDict, defaultdict
+from collections import namedtuple
 from datetime import datetime
 
 from .metainfo import m_env
@@ -33,7 +33,7 @@ from nomad.datamodel.metainfo.common_dft import Run, Method, System, XCFunctiona
     Dos, AtomProjectedDos, SpeciesProjectedDos, KBand, KBandSegment, EnergyVanDerWaals,\
     BasisSetCellDependent, MethodBasisSet, MethodAtomKind, CalculationToCalculationRefs,\
     MethodToMethodRefs, AtomType, Symmetry
-from .metainfo.abacus import section_run as xsection_run, section_method as xsection_method,\
+from .metainfo.abacus import section_method as xsection_method,\
     x_abacus_section_parallel, x_abacus_section_basis_sets, x_abacus_section_specie_basis_set
 
 units_mapping = {'Ha': ureg.hartree, 'Ry': ureg.rydberg, 'eV': ureg.eV,
@@ -79,6 +79,18 @@ class ABACUSInputParser(TextParser):
             Quantity(
                 'scf_max_iteration',
                 r'\n *scf_nmax\s*(\d+)', repeats=False
+            ),
+            Quantity(
+                'nelec',
+                r'\n *nelec\s*(\d+)', repeats=False
+            ),
+            Quantity(
+                'md_type',
+                r'\n *md_type\s*(\d+)', repeats=False
+            ),
+            Quantity(
+                'md_nstep',
+                r'\n *md_type\s*(\d+)', repeats=False
             ),
             Quantity(
                 'occupations',
@@ -209,7 +221,7 @@ class ABACUSOutParser(TextParser):
                     _, energies, occupations = np.split(np.array(list(map(lambda x: x.strip().split(), re.search(
                         rf'{i+1}/{nks} kpoint \(Cartesian\)\s*=.*\n([\s\S]+?)\n\n', val_in).group(1).split('\n'))), dtype=float), 3, axis=1)
                     state = State(kpoint=np.array([kx, ky, kz], dtype=float), energies=energies.flatten().astype(
-                        float)*units_mapping['eV'], occupations=occupations.flatten().astype(float), npws=int(npws))
+                        float), occupations=occupations.flatten().astype(float), npws=int(npws))
                     data.append(state)
                 return data
 
@@ -239,7 +251,7 @@ class ABACUSOutParser(TextParser):
                     _, _, energies, _ = np.split(np.array(list(map(lambda x: x.strip().split(), re.search(
                         rf'k\-points{i+1}\(\d+\):.*\n([\s\S]+?)\n\n', val_in).group(1).split('\n')))), 4, axis=1)
                     state = State(kpoint=np.array([kx, ky, kz], dtype=float), energies=energies.flatten(
-                    ).astype(float)*units_mapping['eV'])
+                    ).astype(float))
                     data.append(state)
                 return data
 
@@ -255,12 +267,11 @@ class ABACUSOutParser(TextParser):
             return data
 
         def str_to_force(val_in):
-            data = dict()
+            data = []
             val = [v.strip().split() for v in val_in.split('\n')]
             for v in val:
-                data[v[0]] = np.array(v[1:], dtype=float) * \
-                    units_mapping['eV'] / units_mapping['A']
-            return data
+                data.append(np.array(v[1:], dtype=float))
+            return np.array(data)* units_mapping['eV'] / units_mapping['A']
 
         def str_to_polarization(val_in):
             P = namedtuple('P', ['value', 'mod', 'vector'])
@@ -888,7 +899,7 @@ class ABACUSOutParser(TextParser):
                 dtype=float, unit='hartree'
             ),
             Quantity(
-                'kinetic',
+                'electronic_kinetic_energy',
                 rf'Energy\s*Potential\s*Kinetic\s*Temperature\s*(?:Pressure \(KBAR\)\s*\n|\n)\s*{re_float}\s*{re_float}\s*({re_float})',
                 dtype=float, unit='hartree'
             ),
@@ -954,13 +965,23 @@ class ABACUSOutParser(TextParser):
                 r'NONSELF-CONSISTENT([\s\S]+?)Total\s*Time', sub_parser=TextParser(quantities=nscf_quantities)
             ),
             Quantity(
-                'ion_threshold',
-                rf'Ion relaxation is not converged yet \(threshold is\s*({re_float})\)', unit='eV/angstrom', repeats=False
-            ),
-            Quantity(
                 'geometry_optimization',
                 r'((?:STEP OF ION RELAXATION|RELAX IONS)\s*:\s*\d+[\s\S]+?(?:Setup the|\!FINAL_ETOT_IS))',
                 sub_parser=TextParser(quantities=relax_quantities), repeats=True
+            ),
+            Quantity(
+                'ion_converged', r'Ion relaxation is converged!', str_operation=lambda x: True if x else False
+            ),
+            Quantity(
+                'force_threshold',
+                rf'Ion relaxation is not converged yet \(threshold is\s*({re_float})\)', unit='eV/angstrom', repeats=False
+            ),
+            Quantity(
+                'lattice_converged', r'Lattice relaxation is converged!', str_operation=lambda x: True if x else False
+            ),
+            Quantity(
+                'stress_threshold',
+                rf'Lattice relaxation is not converged yet \(threshold is\s*({re_float})\)', unit='kilobar', repeats=False
             ),
             Quantity(
                 'molecular_dynamics',
@@ -1051,6 +1072,8 @@ class ABACUSParser(FairdiParser):
             sec_k_band = sec_scc.m_create(KBand)
             sec_k_band.band_structure_kind = 'electronic'
             
+            sec_k_band.reciprocal_cell = sec_run.section_system[-1].x_abacus_reciprocal_vectors
+
             # get efermi
             efermi_Ry = sec_nscf.get('fermi_energy')
             if efermi_Ry is None:
@@ -1070,10 +1093,10 @@ class ABACUSParser(FairdiParser):
                     if slabel == 'up':
                         band_k_points.append(state.kpoint.tolist())
                     band_energies.append(state.energies.tolist())
-            band_energies = np.reshape(band_energies, (nspin, -1, nbands))
+            band_energies = np.reshape(band_energies, (nspin, -1, nbands))*units_mapping['eV']
             sec_k_band_segment = sec_k_band.m_create(KBandSegment)
             sec_k_band_segment.band_k_points = band_k_points
-            sec_k_band_segment.band_energies = band_energies
+            sec_k_band_segment.band_energies = band_energies.to('joule').magnitude
 
         def parse_dos():
             sec_scc = sec_run.section_single_configuration_calculation[-1]
@@ -1120,7 +1143,7 @@ class ABACUSParser(FairdiParser):
 
             # structure
             alat = header.get('alat')
-            sec_system.x_abacus_alat = alat
+            sec_system.x_abacus_alat = alat # bohr
             lattice_vectors = header.get('lattice_vectors')*alat
             sec_system.lattice_vectors = lattice_vectors.to('meter').magnitude
             sec_system.simulation_cell = lattice_vectors.to('meter').magnitude
@@ -1150,6 +1173,9 @@ class ABACUSParser(FairdiParser):
 
             sec_system.x_abacus_cell_volume = header.get('cell_volume')
 
+            reciprocal_vectors = header.get('reciprocal_vectors')*2*np.pi/alat
+            sec_system.x_abacus_reciprocal_vectors = reciprocal_vectors.to('1/meter').magnitude
+
             # symmetry
             symmetry = header.get('symmetry')
             if symmetry:
@@ -1173,9 +1199,12 @@ class ABACUSParser(FairdiParser):
 
             # numbers
             sec_system.number_of_atoms = header.get('number_of_atoms')
-            for name in ['number_or_species', 'number_of_electrons']:
+            for name in ['number_or_species', 'number_of_electrons_out']:
                 val = header.get(name)
                 setattr(sec_system, 'x_abacus_%s' % name, val)
+            number_of_electrons_in = self.input_parser.get('nelec')
+            if number_of_electrons_in:
+                sec_system.x_abacus_total_number_of_electrons_in = number_of_electrons_in
 
         def parse_section(section):
             sec_scc = sec_run.m_create(SingleConfigurationCalculation)
@@ -1183,12 +1212,16 @@ class ABACUSParser(FairdiParser):
             # atom data
             parse_system()
 
+            scf_section = section.get('self_consistent')
+            if scf_section is None:
+                return
+
             # energies
-            scf_iterations = section.get('self_consistent').get('iteration')
+            scf_iterations = scf_section.get('iteration')
             sec_scc.number_of_scf_iterations = len(scf_iterations)
             for scf_iteration in scf_iterations:
                 parse_scf(scf_iteration)
-            e_vdw = scf_iteration.get('e_vdw', None)
+            e_vdw = scf_iterations[-1].get('e_vdw', None)
             if e_vdw:
                 sec_energy_vdw = sec_scc.m_create(EnergyVanDerWaals)
                 sec_energy_vdw.energy_van_der_Waals = e_vdw.to('joule').magnitude
@@ -1202,32 +1235,80 @@ class ABACUSParser(FairdiParser):
                 sec_energy_vdw.energy_van_der_Waals_kind = kind
             for key in ['XC_functional', 'correction_hartree', 'hartree_fock_X_scaled'
             'total', 'reference_fermi']:
-                val = section.get(key)
+                val = scf_iterations[-1].get(key)
                 if key == 'reference_fermi':
                     val = [val]*nspin
                 setattr(sec_scc, 'energy_%s' % key, val.to('joule').magnitude)
 
             # eigenvalues
-            eigenvalues = section.get('self_consistent').get('energy_occupation')
+            eigenvalues = scf_section.get('energy_occupation')
             if eigenvalues is not None:
+                kpoints, npws, eigs, eig, occs, occ = [], [], [], [], [], []
                 sec_eigenvalues = sec_scc.m_create(Eigenvalues)
-                
+                for s_label, data in eigenvalues:
+                    for state in data:
+                        if s_label == 'up':
+                            kpoints.append(state.kpoint)
+                            npws.append(state.npws)
+                        eig.append(state.energies)
+                        occ.append(state.occupations)
+                    eigs.append(eig)
+                    occs.append(occ)
+                sec_eigenvalues.eigenvalues_values = (np.array(eigs)*units_mapping['eV']).to('joule')
+                sec_eigenvalues.eigenvalues_occupation = np.array(occs)
+                # kpoints in direct coordinates 
+                sec_eigenvalues.eigenvalues_kpoints = np.dot(np.linalg.inv(header.get('reciprocal_vectors')), np.array(kpoints).T).T
+
+            # force
+            forces = scf_section.get('forces')
+            if forces is not None:
+                sec_scc.atom_forces = forces.to('newton').magnitude
+
+            # stress and pressure
+            stress = scf_section.get('stress')
+            pressure = scf_section.get('pressure')
+            if stress is not None:
+                sec_scc.stress_tensor = stress.to('pascal').magnitude
+            if pressure is not None:
+                sec_scc.pressure = pressure.to('pascal').magnitude
+
+            # md settings
+            electronic_kinetic_energy = section.get('electronic_kinetic_energy')
+            if electronic_kinetic_energy:
+                sec_scc.electronic_kinetic_energy = electronic_kinetic_energy.to('joule').magnitude
+            temperature = section.get('temperature')
+            if temperature:
+                sec_scc.temperature = temperature
+            pressure = section.get('pressure')
+            if pressure:
+                sec_scc.pressure = pressure.to('pascal').magnitude
 
         # scf
         if run.get('self_consistent', None):
+            self.sampling_method = 'geometry_optimization'
             parse_section(run)
-        
-        # relax/cell-relax
-        for section in run.get('geometry_optimization', []):
-            parse_section(section)
 
-        # md 
-        for section in run.get('molecular_dynamics', []):
-            parse_section(section)
+        # relax/cell-relax/md
+        methods = {'geometry_optimization':'geometry_optimization', 
+                'molecular_dynamics':'molecular_dynamics'}
+        for method in methods:
+            section = run.get(method, [])
+            if section is not None:
+                parse_section(section)
+                self.sampling_method = methods[method]
+                if self.input_parser('md_nstep'):
+                    sec_run.x_abacus_md_nstep_in = self.input_parser('md_nstep')
+                if section.get('md_step'):
+                    sec_run.x_abacus_md_nstep_out = section.get('md_step')
 
         # nscf
-        parse_bandstructure()
-        parse_dos()
+        if run.get('nonself_consistent', None):
+            self.sampling_method = 'geometry_optimization'
+            parse_bandstructure()
+            parse_dos()
+
+        # total time
+        sec_run.x_abacus_program_execution_time = run.get('total_time')
 
     def parse_method(self, run):
         sec_run = self.archive.section_run[-1]
@@ -1361,7 +1442,7 @@ class ABACUSParser(FairdiParser):
                 xc_parameters = dict()
                 if hse_omega is not None:
                     hybrid_coeff = 0.25 if hybrid_coeff is None else hybrid_coeff
-                    xc_parameters.setdefault('$\\omega$ in bohr^-1', hse_omega)
+                    xc_parameters.setdefault('$\\omega$ in m^-1', hse_omega.to('1/m').magnitude)
                 if hybrid_coeff is not None:
                     xc_parameters.setdefault('hybrid coefficient $\\alpha$', hybrid_coeff)
                 if xc_parameters:
@@ -1389,7 +1470,7 @@ class ABACUSParser(FairdiParser):
             sec_run.program_version = run.get('program_version')
             header = run.get('header', {})
 
-            # date
+            # start date
             date_time = run.get('start_date_time')
             if date_time is not None:
                 date_time = datetime.strptime(
@@ -1418,7 +1499,32 @@ class ABACUSParser(FairdiParser):
                 if val is not None:
                     setattr(sec_run, 'x_abacus_%s' % key, val)
 
-            
+            self.parse_method(run)
 
-# TODO: need to convert direct positions to cartesian ones, then thw cartesian ones multiply units bohr
-# symmetry, lattice_vector, rep_vector, position, converted
+            self.parse_configurations(run)
+
+            if self.sampling_method is not None:
+                sec_sampling_method = sec_run.m_create(SamplingMethod)
+                sec_sampling_method.sampling_method = self.sampling_method
+                if self.sampling_method == 'molecular_dynamics':
+                    md_type = self.input_parser('md_type')
+                    if md_type == 0:
+                        sec_sampling_method.ensemble_type = 'NVE'
+                    elif md_type in [1, 2, 3]:
+                        sec_sampling_method.ensemble_type = 'NVT'
+                elif self.sampling_method == 'geometry_optimization':
+                    force_threshold = run.get('force_threshold')
+                    stress_threshold = run.get('stress_threshold')
+                    if force_threshold:
+                        sec_sampling_method.geometry_optimization_threshold_force = force_threshold.to('newton').magnitude
+                    if stress_threshold:
+                        sec_sampling_method.x_abacus_geometry_optimization_threshold_stress = stress_threshold.to('pascal').magnitude
+
+            # end date
+            date_time = run.get('finish_date_time')
+            if date_time is not None:
+                date_time = datetime.strptime(
+                    date_time.replace(' ', ''), '%a%b%d%H:%M:%S%Y')
+                sec_run.time_run_date_start = (
+                    date_time - datetime(1970, 1, 1)).total_seconds()
+                sec_run.run_clean_end = True

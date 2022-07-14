@@ -196,7 +196,6 @@ class x_abacus_section_basis_sets(MSection):
 
     x_abacus_basis_sets_delta_k = Quantity(
         type=np.dtype(np.float64),
-        unit='1 / bohr',
         shape=[],
         description='''
         -
@@ -206,7 +205,6 @@ class x_abacus_section_basis_sets(MSection):
 
     x_abacus_basis_sets_delta_r = Quantity(
         type=np.dtype(np.float64),
-        unit='bohr',
         shape=[],
         description='''
         -
@@ -216,7 +214,6 @@ class x_abacus_section_basis_sets(MSection):
 
     x_abacus_basis_sets_dr_uniform = Quantity(
         type=np.dtype(np.float64),
-        unit='bohr',
         shape=[],
         description='''
         -
@@ -226,7 +223,6 @@ class x_abacus_section_basis_sets(MSection):
 
     x_abacus_basis_sets_rmax = Quantity(
         type=np.dtype(np.float64),
-        unit='bohr',
         shape=[],
         description='''
         -
@@ -261,25 +257,6 @@ class section_single_configuration_calculation(public.section_single_configurati
                     x_abacus_input_settings],
         a_legacy=LegacyDefinition(name='x_abacus_init_velocities'))
 
-    x_abacus_md_step_input = Quantity(
-        type=np.dtype(np.int32),
-        shape=[],
-        description='''
-        -
-        ''',
-        categories=[public.settings_molecular_dynamics,
-                    x_abacus_input_settings],
-        a_legacy=LegacyDefinition(name='x_abacus_md_step_input'))
-
-    x_abacus_md_step_output = Quantity(
-        type=np.dtype(np.int32),
-        shape=[],
-        description='''
-        -
-        ''',
-        categories=[public.settings_molecular_dynamics],
-        a_legacy=LegacyDefinition(name='x_abacus_md_step_output'))
-
 
 class section_run(public.section_run):
 
@@ -293,14 +270,6 @@ class section_run(public.section_run):
         Filename input was read from
         ''',
         a_legacy=LegacyDefinition(name='x_abacus_input_filename'))
-
-    x_abacus_program_execution_date = Quantity(
-        type=str,
-        shape=[],
-        description='''
-        The date on which the program execution started
-        ''',
-        a_legacy=LegacyDefinition(name='x_abacus_program_execution_date'))
 
     x_abacus_program_execution_time = Quantity(
         type=str,
@@ -346,19 +315,29 @@ class section_run(public.section_run):
         categories=[x_abacus_input_settings],
         a_legacy=LegacyDefinition(name='x_abacus_pseudopotential_dirname'))
 
-    x_abacus_geometry_optimization_converged = Quantity(
-        type=str,
-        shape=[],
-        description='''
-        Determines whether a geoemtry optimization is converged.
-        ''',
-        a_legacy=LegacyDefinition(name='x_abacus_geometry_optimization_converged'))
-
     x_abacus_section_parallel = SubSection(
         sub_section=SectionProxy('x_abacus_section_parallel'),
         repeats=True,
         a_legacy=LegacyDefinition(name='x_abacus_section_parallel'))
 
+    x_abacus_md_nstep_in = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        The target total number of md steps.
+        ''',
+        categories=[public.settings_molecular_dynamics,
+                    x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_md_nstep_in'))
+
+    x_abacus_md_nstep_out = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        The actual total number of md steps.
+        ''',
+        categories=[public.settings_molecular_dynamics],
+        a_legacy=LegacyDefinition(name='x_abacus_md_nstep_out'))
 
 class section_method(public.section_method):
 
@@ -374,25 +353,6 @@ class section_method(public.section_method):
         ''',
         categories=[x_abacus_input_settings],
         a_legacy=LegacyDefinition(name='x_abacus_initial_magnetization_total'))
-
-    x_abacus_chg_extrap = Quantity(
-        type=str,
-        shape=[],
-        description='''
-        Methods to do extrapolation of density when ABACUS is doing geometry relaxations
-        ''',
-        categories=[public.settings_molecular_dynamics,
-                    public.settings_geometry_optimization, x_abacus_input_settings],
-        a_legacy=LegacyDefinition(name='x_abacus_chg_extrap'))
-
-    x_abacus_sto_method = Quantity(
-        type=str,
-        shape=[],
-        description='''
-        Methods to do SDFT
-        ''',
-        categories=[x_abacus_input_settings],
-        a_legacy=LegacyDefinition(name='x_abacus_sto_method'))
 
     x_abacus_diagonalization_algorithm = Quantity(
         type=str,
@@ -477,7 +437,6 @@ class section_method(public.section_method):
 
     x_abacus_pao_radial_cutoff = Quantity(
         type=np.dtype(np.float64),
-        unit='bohr',
         shape=[],
         description='''
         Radial cut-off of pseudo atomic orbital
@@ -486,7 +445,7 @@ class section_method(public.section_method):
 
     x_abacus_hse_omega = Quantity(
         type=np.dtype(np.float64),
-        unit='1 / bohr',
+        unit='1 / meter',
         shape=[],
         description='''
         HSE omega
@@ -552,13 +511,21 @@ class section_system(public.section_system):
 
     x_abacus_alat = Quantity(
         type=np.dtype(np.float64),
-        unit='bohr',
         shape=[],
         description='''
         Lattice Parameter 'a', constant during a run and used as unit in other quantities
         ''',
         categories=[public.configuration_core],
         a_legacy=LegacyDefinition(name='x_abacus_alat'))
+
+    x_abacus_reciprocal_cell = Quantity(
+        type=np.dtype(np.float64),
+        shape=[3, 3],
+        unit='1 / meter',
+        description='''
+        The reciprocal cell
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_reciprocal_cell'))
 
     x_abacus_ibrav = Quantity(
         type=np.dtype(np.int32),
@@ -596,14 +563,23 @@ class section_system(public.section_system):
         categories=[public.configuration_core],
         a_legacy=LegacyDefinition(name='x_abacus_ibrav'))
 
-    x_abacus_number_of_electrons = Quantity(
+    x_abacus_number_of_electrons_out = Quantity(
         type=np.dtype(np.int32),
         shape=['x_abacus_number_of_species'],
         description='''
-        This denotes number of electrons of each element in the system
+        This denotes number of electrons of each element in the system calculated by ABACUS
         ''',
         categories=[public.configuration_core],
-        a_legacy=LegacyDefinition(name='x_abacus_total_number_of_electrons'))
+        a_legacy=LegacyDefinition(name='x_abacus_number_of_electrons_out'))
+
+    x_abacus_total_number_of_electrons_in = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        This denotes total number of electrons set in INPUT
+        ''',
+        categories=[public.configuration_core],
+        a_legacy=LegacyDefinition(name='x_abacus_total_number_of_electrons_in'))
 
     x_abacus_number_of_species = Quantity(
         type=np.dtype(np.int32),
@@ -616,7 +592,6 @@ class section_system(public.section_system):
 
     x_abacus_cell_volume = Quantity(
         type=np.dtype(np.float64),
-        unit='bohr**3',
         shape=[],
         description='''
         Volume of unit cell
@@ -699,5 +674,32 @@ class section_scf_iteration(public.section_scf_iteration):
         Absolute per-cell magnetization
         ''',
         a_legacy=LegacyDefinition(name='x_abacus_magnetization_absolute'))
+
+
+class section_eigenvalues(public.section_eigenvalues):
+
+    m_def = Section(validate=False, extends_base_section=True, a_legacy=LegacyDefinition(name='section_eigenvalues'))
+
+    x_abacus_eigenvalues_number_of_planewaves = Quantity(
+        type=np.dtype(np.int32),
+        shape=['number_of_eigenvalues_kpoints'],
+        description='''
+        Number of plane waves for each k-point
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_eigenvalues_number_of_planewaves'))
+
+class section_sampling_method(public.section_sampling_method):
+
+    m_def = Section(validate=False, extends_base_section=True, a_legacy=LegacyDefinition(name='section_sampling_method'))
+    
+    x_abacus_geometry_optimization_threshold_stress = Quantity(
+        type=np.dtype(np.float64),
+        shape=[],
+        unit='pascal',
+        description='''
+        The threshold of the stress convergence, it indicates the largest stress among all the directions
+        ''',
+        categories=[public.SettingsGeometryOptimization, public.SettingsSampling],
+        a_legacy=LegacyDefinition(name='x_abacus_geometry_optimization_threshold_stress'))
 
 m_package.__init_metainfo__()
