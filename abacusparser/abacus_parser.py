@@ -1465,9 +1465,12 @@ class ABACUSParser(FairdiParser):
         for run in self.out_parser.get('run', []):
             sec_run = self.archive.m_create(Run)
             sec_run.program_name = 'ABACUS'
-            sec_run.program_basis_set_type = 'numeric AOs'
             sec_run.program_version = run.get('program_version')
             header = run.get('header', {})
+            if header.get('orbital_settings'):
+                sec_run.program_basis_set_type = 'Numeric AOs'
+            else:
+                sec_run.program_basis_set_type = 'plane waves'
 
             # start date
             date_time = run.get('start_date_time')
