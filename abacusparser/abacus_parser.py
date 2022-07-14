@@ -29,10 +29,9 @@ from nomad.units import ureg
 from nomad.parsing import FairdiParser
 from nomad.parsing.file_parser import TextParser, Quantity, DataTextParser
 from nomad.datamodel.metainfo.common_dft import Run, Method, System, XCFunctionals,\
-    ScfIteration, SingleConfigurationCalculation, SamplingMethod, FrameSequence, Eigenvalues,\
+    ScfIteration, SingleConfigurationCalculation, SamplingMethod, Eigenvalues,\
     Dos, AtomProjectedDos, SpeciesProjectedDos, KBand, KBandSegment, EnergyVanDerWaals,\
-    BasisSetCellDependent, MethodBasisSet, MethodAtomKind, CalculationToCalculationRefs,\
-    MethodToMethodRefs, AtomType, Symmetry
+    BasisSetCellDependent, MethodBasisSet, MethodAtomKind, Symmetry
 from .metainfo.abacus import section_method as xsection_method,\
     x_abacus_section_parallel, x_abacus_section_basis_sets, x_abacus_section_specie_basis_set
 
@@ -1305,7 +1304,7 @@ class ABACUSParser(FairdiParser):
         if run.get('nonself_consistent', None):
             self.sampling_method = 'geometry_optimization'
             parse_bandstructure()
-            parse_dos()
+        parse_dos()    
 
         # total time
         sec_run.x_abacus_program_execution_time = run.get('total_time')
