@@ -257,6 +257,87 @@ class section_single_configuration_calculation(public.section_single_configurati
                     x_abacus_input_settings],
         a_legacy=LegacyDefinition(name='x_abacus_init_velocities'))
 
+    x_abacus_longest_orb_rcut = Quantity(
+        type=np.dtype(np.float64),
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[public.settings_run],
+        a_legacy=LegacyDefinition(name='x_abacus_longest_orb_rcut'))
+
+    x_abacus_longest_nonlocal_projector_rcut = Quantity(
+        type=np.dtype(np.float64),
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[public.settings_run],
+        a_legacy=LegacyDefinition(name='x_abacus_longest_nonlocal_projector_rcut'))
+
+    x_abacus_searching_radius = Quantity(
+        type=np.dtype(np.float64),
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[public.settings_run],
+        a_legacy=LegacyDefinition(name='x_abacus_searching_radius'))
+
+    x_abacus_searching_radius_unit = Quantity(
+        type=np.dtype(np.float64),
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[public.settings_run],
+        a_legacy=LegacyDefinition(name='x_abacus_searching_radius_unit'))
+
+    x_abacus_read_space_grid = Quantity(
+        type=np.dtype(np.int32),
+        shape=[3],
+        description='''
+        -
+        ''',
+        categories=[public.settings_run],
+        a_legacy=LegacyDefinition(name='x_abacus_read_space_grid'))
+
+    x_abacus_big_cell_numbers_in_grid = Quantity(
+        type=np.dtype(np.int32),
+        shape=[3],
+        description='''
+        -
+        ''',
+        categories=[public.settings_run],
+        a_legacy=LegacyDefinition(name='x_abacus_big_cell_numbers_in_grid'))
+
+    x_abacus_meshcell_numbers_in_big_cell = Quantity(
+        type=np.dtype(np.int32),
+        shape=[3],
+        description='''
+        -
+        ''',
+        categories=[public.settings_run],
+        a_legacy=LegacyDefinition(name='x_abacus_meshcell_numbers_in_big_cell'))
+
+    x_abacus_extended_fft_grid = Quantity(
+        type=np.dtype(np.int32),
+        shape=[3],
+        description='''
+        -
+        ''',
+        categories=[public.settings_run],
+        a_legacy=LegacyDefinition(name='x_abacus_extended_fft_grid'))
+
+    x_abacus_extended_fft_grid_dim = Quantity(
+        type=np.dtype(np.int32),
+        shape=[3],
+        description='''
+        -
+        ''',
+        categories=[public.settings_run],
+        a_legacy=LegacyDefinition(name='x_abacus_extended_fft_grid_dim'))
+
 
 class section_run(public.section_run):
 
@@ -609,6 +690,14 @@ class section_method_atom_kind(public.section_method_atom_kind):
         Type of pseudopotential, e.g. 'NC' or 'US'
         ''',
         a_legacy=LegacyDefinition(name='x_abacus_pp_type'))
+
+    x_abacus_pp_xc = Quantity(
+        type=str,
+        shape=[],
+        description='''
+        Exchange-correlation functional of pseudopotential, e.g. 'PBE' or 'PZ'
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_pp_xc'))
 
     x_abacus_pp_lmax = Quantity(
         type=np.dtype(np.int32),

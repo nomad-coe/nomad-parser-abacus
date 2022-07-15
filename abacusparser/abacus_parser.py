@@ -661,9 +661,9 @@ class ABACUSOutParser(TextParser):
                 sub_parser=TextParser(quantities=[
                     Quantity('read_space_grid',
                              r'\[real space grid\]\s*=\s*(\d+)[,\s]*(\d+)[,\s]*(\d+)[,\s]*'),
-                    Quantity('big_cell_numbers',
+                    Quantity('big_cell_numbers_in_grid',
                              r'\[big cell numbers in grid\]\s*=\s*(\d+)[,\s]*(\d+)[,\s]*(\d+)[,\s]*'),
-                    Quantity('meshcell_numbers',
+                    Quantity('meshcell_numbers_in_big_cell',
                              r'\[meshcell numbers in big cell\]\s*=\s*(\d+)[,\s]*(\d+)[,\s]*(\d+)[,\s]*'),
                     Quantity('extended_fft_grid',
                              r'\[extended fft grid\]\s*=\s*(\d+)[,\s]*(\d+)[,\s]*(\d+)[,\s]*'),
@@ -1215,6 +1215,23 @@ class ABACUSParser(FairdiParser):
             if scf_section is None:
                 return
 
+            # search adjacent atoms
+            searching_sec = scf_section.get('search_adjacent_atoms')
+            for key in ['longest_orb_rcut', 'longest_nonlocal_projector_rcut', 
+                        'searching_radius', 'searching_radius_unit']:
+                val = searching_sec.get(key)
+                if val:
+                    setattr(sec_scc, 'x_abacus_%s' % key, val)
+
+            # grid_integration
+            grid_sec = scf_section.get('grid_integration')
+            for key in ['read_space_grid', 'big_cell_numbers_in_grid', 
+                        'meshcell_numbers_in_big_cell', 'extended_fft_grid'
+                        'x_abacus_extended_fft_grid_dim']:
+                val = grid_sec.get(key)
+                if val:
+                    setattr(sec_scc, 'x_abacus_%s' % key, val)
+
             # energies
             scf_iterations = scf_section.get('iteration')
             sec_scc.number_of_scf_iterations = len(scf_iterations)
@@ -1350,7 +1367,7 @@ class ABACUSParser(FairdiParser):
             if cutoff is None:
                 continue
             sec_basis_set = self.archive.section_run[-1].m_create(BasisSetCellDependent)
-            sec_basis_set.basis_set_planewave_cutoff = cutoff
+            sec_basis_set.basis_set_planewave_cutoff = cutoff.to('joule').magnitude
             sec_basis_set.basis_set_cell_dependent_kind = 'plane_waves'
             sec_basis_set.basis_set_cell_dependent_name = 'PW_%.1f' % cutoff.magnitude
 
@@ -1405,8 +1422,7 @@ class ABACUSParser(FairdiParser):
                     continue
                 if key == 'xc':
                     pp_xc = pp.get('xc', None)
-                else:
-                    setattr(sec_method_atom_kind, 'x_abacus_pp_%s' % key, val)
+                setattr(sec_method_atom_kind, 'x_abacus_pp_%s' % key, val)
 
         # xc functional from output
         xc_in = self.input_parser.get('xc', None)
@@ -1416,7 +1432,7 @@ class ABACUSParser(FairdiParser):
             xc = pp_xc
 
         if xc is not None:
-            xsection_method.x_abacus_xc_functional = xc
+            sec_method.x_abacus_xc_functional = xc
 
             # hybrid func
             if xc in ['HYB_GGA_XC_HSE06', 'HSE']:
