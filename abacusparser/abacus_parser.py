@@ -1014,7 +1014,7 @@ class ABACUSParser(FairdiParser):
     def __init__(self):
         super().__init__(name='parsers/abacus', code_name='ABACUS',
                          code_homepage='http://abacus.ustc.edu.cn/',
-                         mainfile_contents_re=r'(\n\s*WELCOME TO ABACUS)')
+                         mainfile_contents_re=r'(\s*WELCOME TO ABACUS)')
         self._metainfo_env = m_env
         self.out_parser = ABACUSOutParser()
         self.input_parser = ABACUSInputParser()
@@ -1094,7 +1094,7 @@ class ABACUSParser(FairdiParser):
                     band_energies.append(state.energies.tolist())
             band_energies = np.reshape(band_energies, (nspin, -1, nbands))*units_mapping['eV']
             sec_k_band_segment = sec_k_band.m_create(KBandSegment)
-            sec_k_band_segment.band_k_points = band_k_points
+            sec_k_band_segment.band_k_points = np.dot(np.linalg.inv(header.get('reciprocal_vectors')), np.array(band_k_points).T).T
             sec_k_band_segment.band_energies = band_energies.to('joule').magnitude
 
         def parse_dos():
@@ -1169,6 +1169,7 @@ class ABACUSParser(FairdiParser):
             sec_system.atom_labels = labels
             if velocities:
                 sec_system.atom_velocities = (np.array(velocities)*units_mapping['A']/units_mapping['fs']).to('meter / second').magnitude
+            sec_system.x_abacus_atom_magnetic_moments = mags
 
             sec_system.x_abacus_cell_volume = header.get('cell_volume')
 
@@ -1227,7 +1228,7 @@ class ABACUSParser(FairdiParser):
             grid_sec = scf_section.get('grid_integration')
             for key in ['read_space_grid', 'big_cell_numbers_in_grid', 
                         'meshcell_numbers_in_big_cell', 'extended_fft_grid'
-                        'x_abacus_extended_fft_grid_dim']:
+                        'extended_fft_grid_dim']:
                 val = grid_sec.get(key)
                 if val:
                     setattr(sec_scc, 'x_abacus_%s' % key, val)
@@ -1320,6 +1321,7 @@ class ABACUSParser(FairdiParser):
         # nscf
         if run.get('nonself_consistent', None):
             self.sampling_method = 'geometry_optimization'
+            parse_section(run)
             parse_bandstructure()
         parse_dos()    
 
@@ -1472,7 +1474,6 @@ class ABACUSParser(FairdiParser):
     def parse(self, filepath, archive, logger):
         self.filepath = os.path.abspath(filepath)
         self.archive = archive
-        self.maindir = os.path.dirname(self.filepath)
         self.logger = logger if logger is not None else logging
 
         self._electronic_structure_method = 'DFT'

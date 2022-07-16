@@ -679,6 +679,15 @@ class section_system(public.section_system):
         ''',
         a_legacy=LegacyDefinition(name='x_abacus_cell_volume'))
 
+    x_abacus_atom_magnetic_moments = Quantity(
+        type=np.dtype(np.float64),
+        unit='bohr_magneton',
+        shape=['number_of_atoms', 3],
+        description='''
+        The start magnetization for each atom
+        ''',
+        a_legacy=LegacyDefinition(name='x_abacus_atom_magnetic_moments'))
+
 
 class section_method_atom_kind(public.section_method_atom_kind):
     m_def = Section(validate=False, extends_base_section=True, a_legacy=LegacyDefinition(name='section_method_atom_kind'))

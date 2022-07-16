@@ -1,0 +1,19 @@
+codeLabel: ABACUS
+codeLabelStyle: 'All in capitals'
+codeName: abacus
+codeUrl: http://abacus.ustc.edu.cn/
+parserDirName: dependencies/parsers/abacus/
+parserGitUrl: https://github.com/nomad-coe/nomad-parser-abacus.git
+parserSpecific: ''
+preamble: ''
+tableOfFiles: |
+  |Input Filename| Description|
+  |--- | --- |
+  |`<text_file>` | **Mainfile**, plain text file w/arbitrary name, e.g.,  `running_<scf, nscf, relax, ...md>.log` |
+  |`INPUT` | Runtime information |
+  |`STRU` | Material's atomic-structure information |
+  |`KPT` | K-points information |
+  |AUX FILES| Description|
+  |`TDOS`| Kohn-Sham total DOS |
+  |`PDOS`  | Projected DOS |
+  |`BANDS_<nspin>.dat` | bandstructure file |

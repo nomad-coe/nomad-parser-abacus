@@ -17,11 +17,9 @@
 #
 
 import pytest
-import numpy as np
 
 from nomad.datamodel import EntryArchive
-from nomad.units import ureg
-from abacusparser.abacus_parser import ABACUSParser
+from abacusparser import ABACUSParser
 
 
 def approx(value, abs=0, rel=1e-6):
@@ -88,5 +86,33 @@ def test_band(parser):
     assert sec_method.section_XC_functionals[0].XC_functional_name == 'LDA_C_PZ'
 
     sec_system = sec_run.section_system[0]
+    assert sec_system.x_abacus_alat.magnitude == 10.2
+    assert sec_system.lattice_vectors[0][1].magnitude == approx(2.69880378e-10)
     assert sec_system.atom_labels == ['Si']
-    
+    assert sec_system.atom_positions[1][0].magnitude == approx(1.34940189e-10)
+    assert sec_system.x_abacus_cell_volume.magnitude == 265.302
+    assert sec_system.x_abacus_reciprocal_vectors[2][0].magnitude == approx(-1.16406857e+10)
+    assert sec_system.number_of_atoms == 1
+    assert sec_system.number_of_species == 1
+    assert sec_system.number_of_electrons_out == [8]
+
+    sec_scc = sec_run.section_single_configuration_calculation[0]
+    assert sec_scc.x_abacus_longest_orb_rcut.magnitude == 8
+    assert sec_scc.x_abacus_longest_nonlocal_projector_rcut.magnitude == 5.01
+    assert sec_scc.x_abacus_searching_radius.magnitude == 26
+    assert sec_scc.x_abacus_searching_radius_unit.magnitude == 10.2
+    assert sec_scc.x_abacus_read_space_grid == [36, 36, 36]
+    assert sec_scc.x_abacus_big_cell_numbers_in_grid == [18, 18, 18]
+    assert sec_scc.x_abacus_meshcell_numbers_in_big_cell == [2, 2, 2]
+    assert sec_scc.x_abacus_extended_fft_grid == [25, 25, 25]
+    assert sec_scc.x_abacus_extended_fft_grid_dim == [69, 69, 69]
+    sec_k_band = sec_scc.section_k_band[0]
+    assert sec_k_band.band_structure_kind == 'electronic'
+    assert sec_k_band.reciprocal_cell[0][0].magnitude == approx(1.16406857e+10)
+    sec_k_band_segment = sec_k_band.section_k_band_segment[0]
+    assert sec_k_band_segment.band_k_points[3][2] == 0.425
+    assert sec_k_band_segment.band_energies[0][4][4].magnitude == approx(1.14715847e-18)
+
+if __name__ == '__main__':
+    test_parser = parser()
+    test_band(test_parser)
