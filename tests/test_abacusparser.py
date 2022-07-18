@@ -33,12 +33,12 @@ def parser():
 
 def test_band(parser):
     archive = EntryArchive()
-    parser.parse('tests/data/Si_band/running_nscf.log', archive, None)
+    parser.parse(r'data\Si_band\running_nscf.log', archive, None)
 
     sec_run = archive.section_run[0]
     assert sec_run.program_version == 'Parallel, in development'
     assert sec_run.program_basis_set_type == 'Numeric AOs'
-    assert sec_run.time_run_date_start.magnitude == 1657036247.0
+    assert sec_run.time_run_date_start.magnitude == approx(1657036247.0)
     sec_parallel = sec_run.x_abacus_section_parallel[0]
     assert sec_parallel.x_abacus_nproc == 8
     assert sec_parallel.x_abacus_allocation_method == '2D block'
@@ -51,7 +51,7 @@ def test_band(parser):
     assert sec_run.section_basis_set_cell_dependent[0].basis_set_cell_dependent_name == 'PW_50.0'
     assert sec_run.section_basis_set_cell_dependent[1].basis_set_planewave_cutoff.magnitude == approx(4.35974472220717e-16)
     assert sec_run.section_sampling_method[0].sampling_method == 'geometry_optimization'
-    assert sec_run.time_run_date_end.magnitude == 1657036249.0
+    assert sec_run.time_run_date_end.magnitude == approx(1657036249.0)
     assert sec_run.run_clean_end
 
     sec_method = sec_run.section_method[0]

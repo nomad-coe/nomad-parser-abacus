@@ -196,6 +196,7 @@ class x_abacus_section_basis_sets(MSection):
 
     x_abacus_basis_sets_delta_k = Quantity(
         type=np.dtype(np.float64),
+        unit='1/bohr',
         shape=[],
         description='''
         -
@@ -205,6 +206,7 @@ class x_abacus_section_basis_sets(MSection):
 
     x_abacus_basis_sets_delta_r = Quantity(
         type=np.dtype(np.float64),
+        unit='bohr',
         shape=[],
         description='''
         -
@@ -214,6 +216,7 @@ class x_abacus_section_basis_sets(MSection):
 
     x_abacus_basis_sets_dr_uniform = Quantity(
         type=np.dtype(np.float64),
+        unit='bohr',
         shape=[],
         description='''
         -
@@ -223,6 +226,7 @@ class x_abacus_section_basis_sets(MSection):
 
     x_abacus_basis_sets_rmax = Quantity(
         type=np.dtype(np.float64),
+        unit='bohr',
         shape=[],
         description='''
         -
@@ -259,6 +263,7 @@ class section_single_configuration_calculation(public.section_single_configurati
 
     x_abacus_longest_orb_rcut = Quantity(
         type=np.dtype(np.float64),
+        unit='bohr',
         shape=[],
         description='''
         -
@@ -268,6 +273,7 @@ class section_single_configuration_calculation(public.section_single_configurati
 
     x_abacus_longest_nonlocal_projector_rcut = Quantity(
         type=np.dtype(np.float64),
+        unit='bohr',
         shape=[],
         description='''
         -
@@ -277,6 +283,7 @@ class section_single_configuration_calculation(public.section_single_configurati
 
     x_abacus_searching_radius = Quantity(
         type=np.dtype(np.float64),
+        unit='bohr',
         shape=[],
         description='''
         -
@@ -286,6 +293,7 @@ class section_single_configuration_calculation(public.section_single_configurati
 
     x_abacus_searching_radius_unit = Quantity(
         type=np.dtype(np.float64),
+        unit='bohr',
         shape=[],
         description='''
         -
@@ -353,7 +361,8 @@ class section_run(public.section_run):
         a_legacy=LegacyDefinition(name='x_abacus_input_filename'))
 
     x_abacus_program_execution_time = Quantity(
-        type=str,
+        type=np.dtype(np.float64),
+        unit='seconds',
         shape=[],
         description='''
         The duration of the program execution
@@ -518,6 +527,7 @@ class section_method(public.section_method):
 
     x_abacus_pao_radial_cutoff = Quantity(
         type=np.dtype(np.float64),
+        unit='bohr',
         shape=[],
         description='''
         Radial cut-off of pseudo atomic orbital
@@ -592,6 +602,7 @@ class section_system(public.section_system):
 
     x_abacus_alat = Quantity(
         type=np.dtype(np.float64),
+        unit='bohr',
         shape=[],
         description='''
         Lattice Parameter 'a', constant during a run and used as unit in other quantities
@@ -673,6 +684,7 @@ class section_system(public.section_system):
 
     x_abacus_cell_volume = Quantity(
         type=np.dtype(np.float64),
+        unit='bohr**3',
         shape=[],
         description='''
         Volume of unit cell

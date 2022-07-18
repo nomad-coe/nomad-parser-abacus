@@ -618,7 +618,7 @@ class ABACUSOutParser(TextParser):
             ),
             Quantity(
                 'allocation_method',
-                r'divide the H&S matrix using ([\w ]+ algorithms\.\n[\s\S]+?)\-+',
+                r'divide the H&S matrix using ([\w ]+ algorithms\.\n[\s\S]+?)\n\n',
                 sub_parser=TextParser(quantities=[
                     Quantity(
                         'method', r'([\w ]+) algorithms'
@@ -914,7 +914,7 @@ class ABACUSOutParser(TextParser):
             ),
         ]
 
-        run_quantities = [
+        self._quantities = [
             Quantity(
                 'program_version',
                 r'Version:\s*(.*)\n', str_operation=lambda x: ''.join(x)
@@ -969,14 +969,14 @@ class ABACUSOutParser(TextParser):
                 sub_parser=TextParser(quantities=relax_quantities), repeats=True
             ),
             Quantity(
-                'ion_converged', r'Ion relaxation is converged!', str_operation=lambda x: True if x else False
+                'ion_converged', r'Ion relaxation (is converged!)', str_operation=lambda x: True if x else False
             ),
             Quantity(
                 'force_threshold',
                 rf'Ion relaxation is not converged yet \(threshold is\s*({re_float})\)', unit='eV/angstrom', repeats=False
             ),
             Quantity(
-                'lattice_converged', r'Lattice relaxation is converged!', str_operation=lambda x: True if x else False
+                'lattice_converged', r'Lattice relaxation (is converged!)', str_operation=lambda x: True if x else False
             ),
             Quantity(
                 'stress_threshold',
@@ -1001,20 +1001,13 @@ class ABACUSOutParser(TextParser):
                 str_operation=lambda x: int(x.strip().split()[0])*3600+int(x.strip().split()[1])*60+int(x.strip().split()[2]), unit='seconds'
             )
         ]
-
-        self._quantities = [
-            Quantity(
-                'run',
-                r'(WELCOME\s*TO\s*ABACUS[\S\s]+?Total\s*Time\s*:\s*\d+\s*h\s*\d+\s*mins\s*\d+\s*secs)',
-                sub_parser=run_quantities, repeats=True)
-        ]
-
+        
 
 class ABACUSParser(FairdiParser):
     def __init__(self):
         super().__init__(name='parsers/abacus', code_name='ABACUS',
                          code_homepage='http://abacus.ustc.edu.cn/',
-                         mainfile_contents_re=r'(\s*WELCOME TO ABACUS)')
+                         mainfile_contents_re=(r'\s*\n\s*WELCOME TO ABACUS'))
         self._metainfo_env = m_env
         self.out_parser = ABACUSOutParser()
         self.input_parser = ABACUSInputParser()
@@ -1055,15 +1048,15 @@ class ABACUSParser(FairdiParser):
                 {'name': 'HF_X', 'weight': lambda x: 0.25 if x is None else x}],
         }
 
-    def parse_configurations(self, run):
+    def parse_configurations(self):
         sec_run = self.archive.section_run[-1]
-        header = run.get('header', {})
+        header = self.out_parser.get('header', {})
         nspin_ori = header.get('number_of_spin_channels')
         nspin = 1 if nspin_ori==4 else nspin_ori 
         nbands = header.get('nbands')
 
         def parse_bandstructure():
-            sec_nscf = run.get('nonself_consistent')
+            sec_nscf = self.out_parser.get('nonself_consistent')
             if sec_nscf  is None:
                 return
             
@@ -1148,17 +1141,17 @@ class ABACUSParser(FairdiParser):
             sec_system.simulation_cell = lattice_vectors.to('meter').magnitude
 
             sites = structure.get('sites')
-            labels = [],
-            positions = [],
+            labels = []
+            positions = []
             mags = []
             velocities = []
             sec_run.x_abacus_init_velocities = self.input_parser.get('x_abacus_init_velocities', 0)
-            for site in site:
-                labels.append(sites['labels'])
-                positions.append(sites['positions'])
-                mags.append(sites['mags'])
+            for site in sites:
+                labels.append(site['labels'])
+                positions.append(site['positions'])
+                mags.append(site['magnetic_moments'])
                 if sec_run.x_abacus_init_velocities:
-                    velocities.append(sites['velocities'])
+                    velocities.append(site['velocities'])
 
             coord_class = structure.get('coord_class')
             if coord_class == 'cartesian':
@@ -1230,32 +1223,33 @@ class ABACUSParser(FairdiParser):
                         'meshcell_numbers_in_big_cell', 'extended_fft_grid'
                         'extended_fft_grid_dim']:
                 val = grid_sec.get(key)
-                if val:
+                if val is not None:
                     setattr(sec_scc, 'x_abacus_%s' % key, val)
 
             # energies
             scf_iterations = scf_section.get('iteration')
-            sec_scc.number_of_scf_iterations = len(scf_iterations)
-            for scf_iteration in scf_iterations:
-                parse_scf(scf_iteration)
-            e_vdw = scf_iterations[-1].get('e_vdw', None)
-            if e_vdw:
-                sec_energy_vdw = sec_scc.m_create(EnergyVanDerWaals)
-                sec_energy_vdw.energy_van_der_Waals = e_vdw.to('joule').magnitude
-                vdw_method = self.input_parser.get('x_abacus_dispersion_correction_method')
-                if vdw_method == 'd2':
-                    kind = 'DFT-D2'
-                elif vdw_method == 'd3_0':
-                    kind = 'DFT-D3(0)'
-                elif vdw_method == 'd3_bj':
-                    kind = 'DFT-D3(BJ)'
-                sec_energy_vdw.energy_van_der_Waals_kind = kind
-            for key in ['XC_functional', 'correction_hartree', 'hartree_fock_X_scaled'
-            'total', 'reference_fermi']:
-                val = scf_iterations[-1].get(key)
-                if key == 'reference_fermi':
-                    val = [val]*nspin
-                setattr(sec_scc, 'energy_%s' % key, val.to('joule').magnitude)
+            if scf_iterations is not None:
+                sec_scc.number_of_scf_iterations = len(scf_iterations)
+                for scf_iteration in scf_iterations:
+                    parse_scf(scf_iteration)
+                e_vdw = scf_iterations[-1].get('e_vdw', None)
+                if e_vdw:
+                    sec_energy_vdw = sec_scc.m_create(EnergyVanDerWaals)
+                    sec_energy_vdw.energy_van_der_Waals = e_vdw.to('joule').magnitude
+                    vdw_method = self.input_parser.get('x_abacus_dispersion_correction_method')
+                    if vdw_method == 'd2':
+                        kind = 'DFT-D2'
+                    elif vdw_method == 'd3_0':
+                        kind = 'DFT-D3(0)'
+                    elif vdw_method == 'd3_bj':
+                        kind = 'DFT-D3(BJ)'
+                    sec_energy_vdw.energy_van_der_Waals_kind = kind
+                for key in ['XC_functional', 'correction_hartree', 'hartree_fock_X_scaled'
+                'total', 'reference_fermi']:
+                    val = scf_iterations[-1].get(key)
+                    if key == 'reference_fermi':
+                        val = [val]*nspin
+                    setattr(sec_scc, 'energy_%s' % key, val.to('joule').magnitude)
 
             # eigenvalues
             eigenvalues = scf_section.get('energy_occupation')
@@ -1301,15 +1295,15 @@ class ABACUSParser(FairdiParser):
                 sec_scc.pressure = pressure.to('pascal').magnitude
 
         # scf
-        if run.get('self_consistent', None):
+        if self.out_parser.get('self_consistent', None):
             self.sampling_method = 'geometry_optimization'
-            parse_section(run)
+            parse_section(self.out_parser)
 
         # relax/cell-relax/md
         methods = {'geometry_optimization':'geometry_optimization', 
                 'molecular_dynamics':'molecular_dynamics'}
         for method in methods:
-            section = run.get(method, [])
+            section = self.out_parser.get(method, None)
             if section is not None:
                 parse_section(section)
                 self.sampling_method = methods[method]
@@ -1319,19 +1313,19 @@ class ABACUSParser(FairdiParser):
                     sec_run.x_abacus_md_nstep_out = section.get('md_step')
 
         # nscf
-        if run.get('nonself_consistent', None):
+        if self.out_parser.get('nonself_consistent', None):
             self.sampling_method = 'geometry_optimization'
-            parse_section(run)
+            parse_section(self.out_parser)
             parse_bandstructure()
         parse_dos()    
 
         # total time
-        sec_run.x_abacus_program_execution_time = run.get('total_time')
+        sec_run.x_abacus_program_execution_time = self.out_parser.get('total_time')
 
-    def parse_method(self, run):
+    def parse_method(self):
         sec_run = self.archive.section_run[-1]
         sec_method = sec_run.m_create(Method)
-        header = run.get('header', {})
+        header = self.out_parser.get('header', {})
 
         # smearing
         occupations =  self.input_parser.get('occupations', 'smearing')
@@ -1347,7 +1341,7 @@ class ABACUSParser(FairdiParser):
                 sec_method.smearing_kind == 'gaussian'
             else:
                 sec_method.smearing_kind = 'empty'
-        sec_method.smearing_width = self.input_parser.get('smearing_width', 0.001).to('joule').magnitude
+        sec_method.smearing_width = self.input_parser.get('smearing_width', 0.001*units_mapping['Ry']).to('joule').magnitude
 
         # input parameters from INPUT file
         input_file = 'INPUT'
@@ -1365,7 +1359,7 @@ class ABACUSParser(FairdiParser):
 
         # pw settings
         for name in ['wavefunction', 'density']:
-            cutoff = header('%s_cutoff' % name)
+            cutoff = header.get('%s_cutoff' % name)
             if cutoff is None:
                 continue
             sec_basis_set = self.archive.section_run[-1].m_create(BasisSetCellDependent)
@@ -1389,7 +1383,7 @@ class ABACUSParser(FairdiParser):
                 sec_basis_set = sec_method.m_create(x_abacus_section_basis_sets)
                 setattr(sec_basis_set, 'x_abacus_basis_sets_%s' % key, val)
 
-            for orb, i in enumerate(orbital_settings.get('orbital_information')):
+            for i, orb in enumerate(orbital_settings.get('orbital_information')):
                 sec_specie_basis_set = sec_basis_set.m_create(x_abacus_section_specie_basis_set)
                 sec_specie_basis_set.x_abacus_specie_basis_set_filename = os.path.basename(header.get('orbital_files')[i])
                 ln_list = []
@@ -1437,6 +1431,7 @@ class ABACUSParser(FairdiParser):
             sec_method.x_abacus_xc_functional = xc
 
             # hybrid func
+            hse_omega, hybrid_coeff = None, None
             if xc in ['HYB_GGA_XC_HSE06', 'HSE']:
                 hse_omega = self.input_parser.get('x_abacus_hse_omega')
                 sec_method.x_abacus_hse_omega = hse_omega
@@ -1479,69 +1474,62 @@ class ABACUSParser(FairdiParser):
         self._electronic_structure_method = 'DFT'
         self.init_parser()
 
-        for run in self.out_parser.get('run', []):
-            sec_run = self.archive.m_create(Run)
-            sec_run.program_name = 'ABACUS'
-            sec_run.program_version = run.get('program_version')
-            header = run.get('header', {})
-            if header.get('orbital_settings'):
+        sec_run = self.archive.m_create(Run)
+        sec_run.program_name = 'ABACUS'
+        sec_run.program_version = self.out_parser.get('program_version')
+        header = self.out_parser.get('header', {})
+        if header.get('orbital_settings'):
                 sec_run.program_basis_set_type = 'Numeric AOs'
-            else:
-                sec_run.program_basis_set_type = 'plane waves'
-
-            # start date
-            date_time = run.get('start_date_time')
-            if date_time is not None:
-                date_time = datetime.strptime(
+        else:
+            sec_run.program_basis_set_type = 'plane waves'
+        # start date
+        date_time = self.out_parser.get('start_date_time')
+        if date_time is not None:
+            date_time = datetime.strptime(
                     date_time.replace(' ', ''), '%a%b%d%H:%M:%S%Y')
-                sec_run.time_run_date_start = (
-                    date_time - datetime(1970, 1, 1)).total_seconds()
-
-            # parallel
-            sec_parallel = sec_run.m_create(x_abacus_section_parallel)
-            sec_parallel.x_abacus_nproc = run.get('nproc')
-            for key in ['kpar', 'bndpar', 'diago_proc']:
+            sec_run.time_run_date_start = (
+                date_time - datetime(1970, 1, 1)).total_seconds()
+        # parallel
+        sec_parallel = sec_run.m_create(x_abacus_section_parallel)
+        sec_parallel.x_abacus_nproc = self.out_parser.get('nproc')
+        for key in ['kpar', 'bndpar', 'diago_proc']:
                 val = self.input_parser.get(key)
                 if val is not None:
                     setattr(sec_parallel, 'x_abacus_%s' % key, val)
-            for key in ['method', 'nb2d', 'trace_loc_row', 'trace_loc_col', 'nloc']:
-                val = header.get(key)
-                if val is not None:
+        for key in ['method', 'nb2d', 'trace_loc_row', 'trace_loc_col', 'nloc']:
+            val = header.get(key)
+            if val is not None:
                     setattr(sec_parallel, 'x_abacus_allocation_%s' % key, val)
-            
-            # input files
-            sec_run.x_abacus_stru_filename = self.input_parser.get('stru_filename', 'STRU')
-            sec_run.x_abacus_kpt_filename = self.input_parser.get('kpt_filename', 'KPT')
-            sec_run.x_abacus_input_filename = run.get('input_filename')
-            for key in ['basis_set_dirname', 'pseudopotential_dirname']:
-                val = run.get(key)
-                if val is not None:
-                    setattr(sec_run, 'x_abacus_%s' % key, val)
-
-            self.parse_method(run)
-
-            self.parse_configurations(run)
-
-            if self.sampling_method is not None:
-                sec_sampling_method = sec_run.m_create(SamplingMethod)
-                sec_sampling_method.sampling_method = self.sampling_method
-                if self.sampling_method == 'molecular_dynamics':
+        
+        # input files
+        sec_run.x_abacus_stru_filename = self.input_parser.get('stru_filename', 'STRU')
+        sec_run.x_abacus_kpt_filename = self.input_parser.get('kpt_filename', 'KPT')
+        sec_run.x_abacus_input_filename = self.out_parser.get('input_filename')
+        for key in ['basis_set_dirname', 'pseudopotential_dirname']:
+            val = self.out_parser.get(key)
+            if val is not None:
+                setattr(sec_run, 'x_abacus_%s' % key, val)
+        self.parse_method()
+        self.parse_configurations()
+        if self.sampling_method is not None:
+            sec_sampling_method = sec_run.m_create(SamplingMethod)
+            sec_sampling_method.sampling_method = self.sampling_method
+            if self.sampling_method == 'molecular_dynamics':
                     md_type = self.input_parser('md_type')
                     if md_type == 0:
                         sec_sampling_method.ensemble_type = 'NVE'
                     elif md_type in [1, 2, 3]:
                         sec_sampling_method.ensemble_type = 'NVT'
-                elif self.sampling_method == 'geometry_optimization':
-                    force_threshold = run.get('force_threshold')
-                    stress_threshold = run.get('stress_threshold')
-                    if force_threshold:
+            elif self.sampling_method == 'geometry_optimization':
+                force_threshold = self.out_parser.get('force_threshold')
+                stress_threshold = self.out_parser.get('stress_threshold')
+                if force_threshold:
                         sec_sampling_method.geometry_optimization_threshold_force = force_threshold.to('newton').magnitude
-                    if stress_threshold:
-                        sec_sampling_method.x_abacus_geometry_optimization_threshold_stress = stress_threshold.to('pascal').magnitude
-
-            # end date
-            date_time = run.get('finish_date_time')
-            if date_time is not None:
+                if stress_threshold:
+                    sec_sampling_method.x_abacus_geometry_optimization_threshold_stress = stress_threshold.to('pascal').magnitude
+        # end date
+        date_time = self.out_parser.get('finish_date_time')
+        if date_time is not None:
                 date_time = datetime.strptime(
                     date_time.replace(' ', ''), '%a%b%d%H:%M:%S%Y')
                 sec_run.time_run_date_start = (
