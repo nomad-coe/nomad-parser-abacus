@@ -429,6 +429,7 @@ class section_run(public.section_run):
         categories=[public.settings_molecular_dynamics],
         a_legacy=LegacyDefinition(name='x_abacus_md_nstep_out'))
 
+
 class section_method(public.section_method):
 
     m_def = Section(validate=False, extends_base_section=True,
@@ -610,14 +611,14 @@ class section_system(public.section_system):
         categories=[public.configuration_core],
         a_legacy=LegacyDefinition(name='x_abacus_alat'))
 
-    x_abacus_reciprocal_cell = Quantity(
+    x_abacus_reciprocal_vectors = Quantity(
         type=np.dtype(np.float64),
         shape=[3, 3],
         unit='1 / meter',
         description='''
         The reciprocal cell
         ''',
-        a_legacy=LegacyDefinition(name='x_abacus_reciprocal_cell'))
+        a_legacy=LegacyDefinition(name='x_abacus_reciprocal_vectors'))
 
     x_abacus_ibrav = Quantity(
         type=np.dtype(np.int32),
@@ -797,6 +798,7 @@ class section_eigenvalues(public.section_eigenvalues):
         Number of plane waves for each k-point
         ''',
         a_legacy=LegacyDefinition(name='x_abacus_eigenvalues_number_of_planewaves'))
+
 
 class section_sampling_method(public.section_sampling_method):
 

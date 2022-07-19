@@ -62,11 +62,10 @@ def test_band(parser):
     assert sec_basis_sets.x_abacus_basis_sets_delta_r.magnitude == 0.01
     assert sec_basis_sets.x_abacus_basis_sets_dr_uniform.magnitude == 0.001
     assert sec_basis_sets.x_abacus_basis_sets_rmax.magnitude == 30
-    assert sec_basis_sets.x_abacus_basis_sets_kmesh.magnitude == 711
+    assert sec_basis_sets.x_abacus_basis_sets_kmesh == 711
     sec_specie_basis_set = sec_basis_sets.x_abacus_section_specie_basis_set
-    assert len(sec_specie_basis_set) == 1
     assert sec_specie_basis_set[0].x_abacus_specie_basis_set_filename == 'Si_lda_8.0au_50Ry_2s2p1d'
-    assert sec_specie_basis_set[0].x_abacus_specie_basis_set_ln == [[0, 0], [0, 1], [1, 0], [1, 1], [2, 0]]
+    assert (sec_specie_basis_set[0].x_abacus_specie_basis_set_ln == [[0, 0], [0, 1], [1, 0], [1, 1], [2, 0]]).all()
     assert sec_specie_basis_set[0].x_abacus_specie_basis_set_rcutoff.magnitude == 8
     assert sec_specie_basis_set[0].x_abacus_specie_basis_set_rmesh == 801
     assert sec_method.number_of_spin_channels == 1
@@ -88,29 +87,32 @@ def test_band(parser):
     sec_system = sec_run.section_system[0]
     assert sec_system.x_abacus_alat.magnitude == 10.2
     assert sec_system.lattice_vectors[0][1].magnitude == approx(2.69880378e-10)
-    assert sec_system.atom_labels == ['Si']
+    assert sec_system.atom_labels == ['Si', 'Si']
     assert sec_system.atom_positions[1][0].magnitude == approx(1.34940189e-10)
     assert sec_system.x_abacus_cell_volume.magnitude == 265.302
     assert sec_system.x_abacus_reciprocal_vectors[2][0].magnitude == approx(-1.16406857e+10)
-    assert sec_system.number_of_atoms == 1
-    assert sec_system.number_of_species == 1
-    assert sec_system.number_of_electrons_out == [8]
+    assert sec_system.number_of_atoms == 2
+    assert sec_system.x_abacus_number_of_species == 1
+    assert sec_system.x_abacus_number_of_electrons_out[0] == 8
 
     sec_scc = sec_run.section_single_configuration_calculation[0]
     assert sec_scc.x_abacus_longest_orb_rcut.magnitude == 8
     assert sec_scc.x_abacus_longest_nonlocal_projector_rcut.magnitude == 5.01
     assert sec_scc.x_abacus_searching_radius.magnitude == 26
     assert sec_scc.x_abacus_searching_radius_unit.magnitude == 10.2
-    assert sec_scc.x_abacus_read_space_grid == [36, 36, 36]
-    assert sec_scc.x_abacus_big_cell_numbers_in_grid == [18, 18, 18]
-    assert sec_scc.x_abacus_meshcell_numbers_in_big_cell == [2, 2, 2]
-    assert sec_scc.x_abacus_extended_fft_grid == [25, 25, 25]
-    assert sec_scc.x_abacus_extended_fft_grid_dim == [69, 69, 69]
+    assert sec_scc.x_abacus_read_space_grid[0] == 36
+    assert sec_scc.x_abacus_big_cell_numbers_in_grid[2] == 18
+    assert sec_scc.x_abacus_meshcell_numbers_in_big_cell[1] == 2
+    assert sec_scc.x_abacus_extended_fft_grid[0] == 25
+    assert sec_scc.x_abacus_extended_fft_grid_dim[2] == 69
     sec_k_band = sec_scc.section_k_band[0]
     assert sec_k_band.band_structure_kind == 'electronic'
     assert sec_k_band.reciprocal_cell[0][0].magnitude == approx(1.16406857e+10)
+    assert sec_scc.energy_reference_fermi.magnitude == approx(1.055136698179135e-18)
     sec_k_band_segment = sec_k_band.section_k_band_segment[0]
+    assert sec_k_band_segment.band_k_points.shape == (101, 3)
     assert sec_k_band_segment.band_k_points[3][2] == 0.425
+    assert sec_k_band_segment.band_energies.shape == (1, 101, 8)
     assert sec_k_band_segment.band_energies[0][4][4].magnitude == approx(1.14715847e-18)
 
 if __name__ == '__main__':
