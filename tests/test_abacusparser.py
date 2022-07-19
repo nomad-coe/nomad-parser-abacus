@@ -17,7 +17,9 @@
 #
 
 import pytest
+import numpy as np
 
+from nomad.units import ureg
 from nomad.datamodel import EntryArchive
 from abacusparser import ABACUSParser
 
@@ -95,6 +97,7 @@ def test_band(parser):
     assert sec_system.x_abacus_number_of_species == 1
     assert sec_system.x_abacus_number_of_electrons_out[0] == 8
 
+    assert len(sec_run.section_single_configuration_calculation) == 1
     sec_scc = sec_run.section_single_configuration_calculation[0]
     assert sec_scc.x_abacus_longest_orb_rcut.magnitude == 8
     assert sec_scc.x_abacus_longest_nonlocal_projector_rcut.magnitude == 5.01
@@ -105,16 +108,45 @@ def test_band(parser):
     assert sec_scc.x_abacus_meshcell_numbers_in_big_cell[1] == 2
     assert sec_scc.x_abacus_extended_fft_grid[0] == 25
     assert sec_scc.x_abacus_extended_fft_grid_dim[2] == 69
+    assert sec_scc.energy_reference_fermi.magnitude == approx(1.055136698179135e-18)
     sec_k_band = sec_scc.section_k_band[0]
     assert sec_k_band.band_structure_kind == 'electronic'
     assert sec_k_band.reciprocal_cell[0][0].magnitude == approx(1.16406857e+10)
-    assert sec_scc.energy_reference_fermi.magnitude == approx(1.055136698179135e-18)
     sec_k_band_segment = sec_k_band.section_k_band_segment[0]
     assert sec_k_band_segment.band_k_points.shape == (101, 3)
     assert sec_k_band_segment.band_k_points[3][2] == 0.425
     assert sec_k_band_segment.band_energies.shape == (1, 101, 8)
     assert sec_k_band_segment.band_energies[0][4][4].magnitude == approx(1.14715847e-18)
 
+
+def test_dos(parser):
+    archive = EntryArchive()
+    parser.parse(r'data\Si_dos\running_nscf.log', archive, None)
+
+    sec_run = archive.section_run[0]
+    assert len(sec_run.section_single_configuration_calculation) == 1
+    sec_scc = sec_run.section_single_configuration_calculation[0]
+    assert sec_scc.energy_reference_fermi.magnitude == approx(1.055136698179135e-18)
+    energy_reference = sec_scc.energy_reference_fermi.to('eV').magnitude
+
+    sec_dos = sec_scc.section_dos[0]
+    assert sec_dos.dos_kind == 'electronic'
+    assert sec_dos.dos_energies.shape == (2265, )
+    assert sec_dos.dos_values.shape == (1, 2265)
+
+    # Check that an approporiately sized band gap is found at the given
+    # reference energy
+    energies = sec_dos.dos_energies.to('eV').magnitude
+    values = (sec_dos.dos_values/ureg.joule).to('1/eV').magnitude
+    nonzero = np.unique(values.nonzero())
+    energies = energies[nonzero]
+    energies.sort()
+    lowest_unoccupied_index = np.searchsorted(energies, energy_reference, "right")[0]
+    highest_occupied_index = lowest_unoccupied_index - 1
+    gap = energies[lowest_unoccupied_index] - energies[highest_occupied_index]
+    assert gap == approx(0.01)
+
 if __name__ == '__main__':
     test_parser = parser()
     test_band(test_parser)
+    test_dos(test_parser)

@@ -1099,8 +1099,8 @@ class ABACUSParser(FairdiParser):
             data = self.tdos_parser.data.T
             energies = data[0]*units_mapping['eV']
             sec_dos.number_of_dos_values = len(energies)
-            sec_dos.dos_energies = energies
-            sec_dos.dos_values = data[1:]/units_mapping['eV'].to('1/J').magnitude
+            sec_dos.dos_energies = (energies.to('joule')).magnitude
+            sec_dos.dos_values = ((data[1:]/units_mapping['eV']).to('1/J')).magnitude
 
             #TODO: parse PDOS file
                 
@@ -1319,6 +1319,7 @@ class ABACUSParser(FairdiParser):
             self.sampling_method = 'geometry_optimization'
             parse_section(self.out_parser)
             parse_bandstructure()
+            # TODO: parse POLARIZATION
 
         parse_dos()    
 

@@ -13412,31 +13412,6 @@ is_mp : 1
                         sum up the states = 16
  Fermi energy is 0.484 Rydberg
 
- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
- |                                                                    |
- | POLARIZATION CALCULATION:                                          |
- |                  Modern Theory of Polarization                     |
- | calculate the Macroscopic polarization of a crystalline insulator  |
- | by using Berry Phase method.                                       |
- |                                                                    |
- <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-
-
-
- VALUES OF POLARIZATION
-
-  The Ionic Phase:   -0.10600
- Electronic Phase:    0.92508
-
- The calculated polarization direction is in R3 direction
-
- P =    7.4095194  (mod   18.0922373)  (   0.0000000,   0.0000000,   7.4095194) (e/Omega).bohr
-
- P =    0.0155792  (mod    0.0380407)  (   0.0000000,   0.0000000,   0.0155792) e/bohr^2
-
- P =    0.8906925  (mod    2.1748536)  (   0.0000000,   0.0000000,   0.8906925) C/m^2
-
 
   |CLASS_NAME---------|NAME---------------|TIME(Sec)-----|CALLS----|AVG------|PER%-------
                                       total         7.3771        11      0.67     1e+02%
