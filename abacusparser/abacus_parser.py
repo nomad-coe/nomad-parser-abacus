@@ -757,22 +757,22 @@ class ABACUSOutParser(TextParser):
         scf_quantities = [
             Quantity(
                 'iteration',
-                r'(ELEC\s*=\s*\d+\s*\-+[\s\S]+?charge density convergence is achieved)', 
+                rf'(ELEC\s*=\s*\d+\s*\-+[\s\S]+?\s*E_Fermi\s*{re_float}\s*{re_float})\n', repeats=True,
                 sub_parser=TextParser(quantities=[
                     Quantity(
-                        'elec_step', r'ELEC\s*=\s*(\d+)', dtype=int, repeats=True,
+                        'elec_step', r'ELEC\s*=\s*(\d+)', dtype=int
                     ),
                     Quantity(
-                        'density_error', rf'Density error is\s*({re_float})', dtype=float, repeats=True,
+                        'density_error', rf'Density error is\s*({re_float})', dtype=float
                     ),
                     Quantity(
-                        'energy_total_scf_iteration', rf'E_KohnSham\s*{re_float}\s*({re_float})', dtype=float, unit='eV', repeats=True,
+                        'energy_total_scf_iteration', rf'E_KohnSham\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
                     ),
                     Quantity(
-                        'x_abacus_energy_total_harris_foulkes_estimate', rf'E_Harris\s*{re_float}\s*({re_float})', dtype=float, unit='eV', repeats=True,
+                        'x_abacus_energy_total_harris_foulkes_estimate', rf'E_Harris\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
                     ),
                     Quantity(
-                        'e_fermi', rf'E_Fermi\s*{re_float}\s*({re_float})', dtype=float, unit='eV', repeats=True,
+                        'e_fermi', rf'E_Fermi\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
                     ),
                     Quantity(
                         'e_band', rf'E_band\s*{re_float}\s*({re_float})', dtype=float, unit='eV'
@@ -1130,8 +1130,7 @@ class ABACUSParser(FairdiParser):
             sec_scf = sec_scc.m_create(ScfIteration)
 
             density_errors = iteration.get('density_error')
-            sec_scc.number_of_scf_iterations = len(density_errors)
-            sec_scf.x_abacus_density_change_scf_iteration = density_errors[-1]
+            sec_scf.x_abacus_density_change_scf_iteration = density_errors
 
             # energies
             energy_name = ['x_abacus_energy_total_harris_foulkes_estimate', 'energy_total_scf_iteration']
@@ -1139,28 +1138,8 @@ class ABACUSParser(FairdiParser):
                 val = iteration.get(name)
                 if val is None:
                     continue
-                setattr(sec_scf, name, val[-1].to('joule').magnitude)
-            sec_scf.energy_reference_fermi_iteration = [iteration.get('e_fermi')[-1].to('joule').magnitude]*nspin
-            e_vdw = iteration.get('e_vdw', None)
-            if e_vdw is not None:
-                sec_energy_vdw = sec_scc.m_create(EnergyVanDerWaals)
-                sec_energy_vdw.energy_van_der_Waals = e_vdw.to('joule').magnitude
-                vdw_method = self.input_parser.get('x_abacus_dispersion_correction_method')
-                if vdw_method == 'd2':
-                    kind = 'DFT-D2'
-                elif vdw_method == 'd3_0':
-                    kind = 'DFT-D3(0)'
-                elif vdw_method == 'd3_bj':
-                    kind = 'DFT-D3(BJ)'
-                sec_energy_vdw.energy_van_der_Waals_kind = kind
-            for key in ['XC_functional', 'correction_hartree', 'hartree_fock_X_scaled'
-            'total', 'reference_fermi']:
-                val = iteration.get(key)
-                if val is None:
-                    continue
-                if key == 'reference_fermi':
-                    val = [val]*nspin
-                setattr(sec_scc, 'energy_%s' % key, val.to('joule').magnitude)
+                setattr(sec_scf, name, val.to('joule').magnitude)
+            sec_scf.energy_reference_fermi_iteration = [iteration.get('e_fermi').to('joule').magnitude]*nspin
 
             # magnetization
             for key in ['magnetization_total', 'magnetization_absolute']:
@@ -1277,8 +1256,31 @@ class ABACUSParser(FairdiParser):
             # energies
             for scf_iterations in sub_section:
                 scf_iteration = scf_iterations.get('iteration')
-                if scf_iteration is not None:
-                    parse_scf(scf_iteration)
+                if scf_iteration is None:
+                    continue
+                sec_scc.number_of_scf_iterations = len(scf_iteration)
+                for iteration in scf_iteration:
+                    parse_scf(iteration)
+                e_vdw = iteration.get('e_vdw', None)
+                if e_vdw is not None:
+                    sec_energy_vdw = sec_scc.m_create(EnergyVanDerWaals)
+                    sec_energy_vdw.energy_van_der_Waals = e_vdw.to('joule').magnitude
+                    vdw_method = self.input_parser.get('x_abacus_dispersion_correction_method')
+                    if vdw_method == 'd2':
+                        kind = 'DFT-D2'
+                    elif vdw_method == 'd3_0':
+                        kind = 'DFT-D3(0)'
+                    elif vdw_method == 'd3_bj':
+                        kind = 'DFT-D3(BJ)'
+                    sec_energy_vdw.energy_van_der_Waals_kind = kind
+                for key in ['XC_functional', 'correction_hartree', 'hartree_fock_X_scaled'
+                'total', 'reference_fermi']:
+                    val = iteration.get(key)
+                    if val is None:
+                        continue
+                    if key == 'reference_fermi':
+                        val = [val]*nspin
+                    setattr(sec_scc, 'energy_%s' % key, val.to('joule').magnitude)
 
             # eigenvalues
             eigenvalues = sub_section[-1].get('energy_occupation')

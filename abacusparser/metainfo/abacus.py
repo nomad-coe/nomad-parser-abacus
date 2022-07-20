@@ -803,6 +803,7 @@ class section_scf_iteration(public.section_scf_iteration):
 
     x_abacus_energy_total_harris_foulkes_estimate = Quantity(
         type=np.dtype(np.float64),
+        unit='joule',
         shape=[],
         description='''
         Stores the change of charge density with respect to the previous self-consistent

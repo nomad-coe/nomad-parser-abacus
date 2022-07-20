@@ -166,6 +166,16 @@ def test_scf(parser):
     assert sec_system_sym.x_abacus_point_group_schoenflies_name == 'T_d'
     assert sec_system.x_abacus_celldm[0] == approx(3.8166849)
     assert sec_system.x_abacus_celldm[-1] == 60
+    assert sec_system_sym.x_abacus_number_of_rotation_matrices == 48
+    assert sec_system_sym.x_abacus_number_of_point_group_operations == 24
+    assert sec_system_sym.x_abacus_number_of_space_group_operations == 24
+
+    assert len(sec_run.section_single_configuration_calculation) == 1
+    sec_scc = sec_run.section_single_configuration_calculation[0]
+    assert len(sec_scc.section_scf_iteration) == sec_scc.number_of_scf_iterations
+    sec_scf = sec_scc.section_scf_iteration[-1]
+    assert sec_scf.x_abacus_density_change_scf_iteration == approx(8.46207322367e-10)
+    assert sec_scf.x_abacus_energy_total_harris_foulkes_estimate.magnitude == approx(-3.452765284886149e-17)
 
 if __name__ == '__main__':
     test_parser = parser()
