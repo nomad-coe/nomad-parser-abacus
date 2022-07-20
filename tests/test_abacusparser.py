@@ -182,15 +182,43 @@ def test_scf(parser):
     assert sec_scf[5].x_abacus_density_change_scf_iteration == approx(8.46207322367e-10)
     assert sec_scf[5].x_abacus_energy_total_harris_foulkes_estimate.magnitude == approx(-3.452765284886149e-17)
     assert sec_scf[0].energy_total_scf_iteration.magnitude == approx(-3.451916016970848e-17)
-    assert sec_scf[2].energy_reference_fermi_iteration.magnitude[0] == approx(1.0082248524478308e-18)
+    assert sec_scf[2].energy_reference_fermi_iteration[0].magnitude == approx(1.0082248524478308e-18)
     sec_eigenvalues = sec_scc.section_eigenvalues[0]
     assert sec_eigenvalues.eigenvalues_values.shape == (1, 8, 4)
-    assert sec_eigenvalues.eigenvalues_values.magnitude[0][4][1] == approx(-2.3289399769487398e-20)
+    assert sec_eigenvalues.eigenvalues_values[0][4][1].magnitude == approx(-2.3289399769487398e-20)
     assert sec_eigenvalues.eigenvalues_occupation.shape == (1, 8, 4)
     assert sec_eigenvalues.eigenvalues_occupation[0][6][1] == approx(0.0937500)
     assert sec_eigenvalues.eigenvalues_kpoints.shape == (8, 3)
     assert sec_eigenvalues.eigenvalues_kpoints[4][0] == 0.75
     assert sec_eigenvalues.x_abacus_eigenvalues_number_of_planewaves[3] == 191
+
+
+def test_geomopt(parser):
+    archive = EntryArchive()
+    parser.parse(r'data\Si_geomopt\running_cell-relax.log', archive, None)
+
+    sec_run = archive.section_run[0]
+
+    sec_method = sec_run.section_method[0]
+    assert sec_method.smearing_kind == 'gaussian'
+    assert sec_method.smearing_width.magnitude == approx(2.179872361103585e-20)
+    assert sec_method.x_abacus_gamma_algorithms == True
+    assert sec_method.x_abacus_basis_type == 'lcao'
+
+    sec_sampling_method = sec_run.section_sampling_method[0]
+    assert sec_sampling_method.sampling_method == 'geometry_optimization'
+    assert sec_sampling_method.geometry_optimization_threshold_force == approx(1.6021766339999997e-12)
+    assert sec_sampling_method.x_abacus_geometry_optimization_threshold_stress == approx(1000000.0)
+
+    assert len(sec_run.section_single_configuration_calculation) == 50
+    sec_scc = sec_run.section_single_configuration_calculation
+    assert sec_scc[20].number_of_scf_iterations == 10
+    assert sec_scc[20].atom_forces.shape == (2, 3)
+    assert sec_scc[20].atom_forces[1][0].magnitude == approx(-1.292767486795188e-11)
+    assert sec_scc[42].stress_tensor[1][1].magnitude == approx(62419700.0)
+    assert sec_scc[10].pressure.magnitude == approx(-100095500.0)
+    assert sec_scc[48].reference_fermi.magnitude == approx(-6.769734186416427e-19)
+
 
 if __name__ == '__main__':
     test_parser = parser()
