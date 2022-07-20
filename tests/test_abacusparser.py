@@ -57,6 +57,7 @@ def test_band(parser):
     assert sec_run.run_clean_end
 
     sec_method = sec_run.section_method[0]
+    assert sec_method.x_abacus_basis_type == 'lcao'
     assert sec_method.x_abacus_number_of_pw_for_wavefunction == 2085
     assert sec_method.x_abacus_number_of_sticks_for_density == 721
     sec_basis_sets = sec_method.x_abacus_section_basis_sets[0]
@@ -146,7 +147,28 @@ def test_dos(parser):
     gap = energies[lowest_unoccupied_index] - energies[highest_occupied_index]
     assert gap == approx(0.01)
 
+
+def test_scf(parser):
+    archive = EntryArchive()
+    parser.parse(r'data\Si_scf\running_scf.log', archive, None)
+
+    sec_run = archive.section_run[0]
+
+    sec_method = sec_run.section_method[0]
+    assert sec_method.scf_max_iteration == 20
+    assert sec_method.x_abacus_basis_type == 'pw'
+
+    sec_system = sec_run.section_system[0]
+    sec_system_sym = sec_system.section_symmetry[0]
+    assert sec_system_sym.crystal_system == 'cubic'
+    assert sec_system.x_abacus_ibrav == 3
+    assert sec_system_sym.bravais_lattice == 'cF'
+    assert sec_system_sym.x_abacus_point_group_schoenflies_name == 'T_d'
+    assert sec_system.x_abacus_celldm[0] == approx(3.8166849)
+    assert sec_system.x_abacus_celldm[-1] == 60
+
 if __name__ == '__main__':
     test_parser = parser()
     test_band(test_parser)
     test_dos(test_parser)
+    test_scf(test_parser)

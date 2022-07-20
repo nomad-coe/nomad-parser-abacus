@@ -463,6 +463,15 @@ class section_method(public.section_method):
         categories=[public.settings_van_der_Waals, x_abacus_input_settings],
         a_legacy=LegacyDefinition(name='x_abacus_dispersion_correction_method'))
 
+    x_abacus_basis_type = Quantity(
+        type=str,
+        shape=[],
+        description='''
+        Type of basis sets
+        ''',
+        categories=[public.settings_van_der_Waals, x_abacus_input_settings],
+        a_legacy=LegacyDefinition(name='x_abacus_basis_type'))
+
     x_abacus_spin_orbit = Quantity(
         type=bool,
         shape=[],
@@ -620,29 +629,11 @@ class section_system(public.section_system):
         ''',
         a_legacy=LegacyDefinition(name='x_abacus_reciprocal_vectors'))
 
-    x_abacus_ibrav = Quantity(
-        type=np.dtype(np.int32),
-        shape=[],
-        description='''
-        Bravais lattice index, constant during a run
-        ''',
-        categories=[public.configuration_core],
-        a_legacy=LegacyDefinition(name='x_abacus_ibrav'))
-
-    x_abacus_point_group_schoenflies_name = Quantity(
-        type=str,
-        shape=[],
-        description='''
-        The Schoenflies name of the point group
-        ''',
-        categories=[public.configuration_core],
-        a_legacy=LegacyDefinition(name='x_abacus_point_group_schoenflies_name'))
-
     x_abacus_celldm = Quantity(
         type=np.dtype(np.float64),
         shape=[6],
         description='''
-        Cell dimension
+        Cell [a, b, c, alpha, beta, gamma], length a, b and c are in unit Angstrom
         ''',
         categories=[public.configuration_core],
         a_legacy=LegacyDefinition(name='x_abacus_celldm'))
@@ -700,6 +691,56 @@ class section_system(public.section_system):
         The start magnetization for each atom
         ''',
         a_legacy=LegacyDefinition(name='x_abacus_atom_magnetic_moments'))
+
+
+class section_symmetry(public.section_symmetry):
+    m_def = Section(validate=False, extends_base_section=True,
+                    a_legacy=LegacyDefinition(name='section_symmetry'))
+
+    x_abacus_ibrav = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        Bravais lattice index, constant during a run
+        ''',
+        categories=[public.configuration_core],
+        a_legacy=LegacyDefinition(name='x_abacus_ibrav'))
+
+    x_abacus_point_group_schoenflies_name = Quantity(
+        type=str,
+        shape=[],
+        description='''
+        The Schoenflies name of the point group
+        ''',
+        categories=[public.configuration_core],
+        a_legacy=LegacyDefinition(name='x_abacus_point_group_schoenflies_name'))
+
+    x_abacus_number_of_rotation_matrices = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[public.configuration_core],
+        a_legacy=LegacyDefinition(name='x_abacus_number_of_rotation_matrices'))
+
+    x_abacus_number_of_point_group_operations = Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[public.configuration_core],
+        a_legacy=LegacyDefinition(name='x_abacus_number_of_point_group_operations'))
+
+    x_abacus_number_of_space_group_operations= Quantity(
+        type=np.dtype(np.int32),
+        shape=[],
+        description='''
+        -
+        ''',
+        categories=[public.configuration_core],
+        a_legacy=LegacyDefinition(name='x_abacus_number_of_space_group_operations'))
 
 
 class section_method_atom_kind(public.section_method_atom_kind):
