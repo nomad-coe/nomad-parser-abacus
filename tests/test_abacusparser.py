@@ -153,6 +153,7 @@ def test_scf(parser):
     parser.parse(r'data\Si_scf\running_scf.log', archive, None)
 
     sec_run = archive.section_run[0]
+    assert sec_run.x_abacus_program_execution_time.magnitude == 1.0
 
     sec_method = sec_run.section_method[0]
     assert sec_method.scf_max_iteration == 20
@@ -173,9 +174,23 @@ def test_scf(parser):
     assert len(sec_run.section_single_configuration_calculation) == 1
     sec_scc = sec_run.section_single_configuration_calculation[0]
     assert len(sec_scc.section_scf_iteration) == sec_scc.number_of_scf_iterations
-    sec_scf = sec_scc.section_scf_iteration[-1]
-    assert sec_scf.x_abacus_density_change_scf_iteration == approx(8.46207322367e-10)
-    assert sec_scf.x_abacus_energy_total_harris_foulkes_estimate.magnitude == approx(-3.452765284886149e-17)
+    assert sec_scc.energy_XC_functional.magnitude == approx(-1.0521129713661978e-17)
+    assert sec_scc.energy_correction_hartree.magnitude == approx(2.402022465119184e-18)
+    assert sec_scc.energy_hartree_fock_X_scaled.magnitude == approx(0.0)
+    assert sec_scc.energy_total.magnitude == approx(-3.452765284822062e-17)
+    sec_scf = sec_scc.section_scf_iteration
+    assert sec_scf[5].x_abacus_density_change_scf_iteration == approx(8.46207322367e-10)
+    assert sec_scf[5].x_abacus_energy_total_harris_foulkes_estimate.magnitude == approx(-3.452765284886149e-17)
+    assert sec_scf[0].energy_total_scf_iteration.magnitude == approx(-3.451916016970848e-17)
+    assert sec_scf[2].energy_reference_fermi_iteration.magnitude[0] == approx(1.0082248524478308e-18)
+    sec_eigenvalues = sec_scc.section_eigenvalues[0]
+    assert sec_eigenvalues.eigenvalues_values.shape == (1, 8, 4)
+    assert sec_eigenvalues.eigenvalues_values.magnitude[0][4][1] == approx(-2.3289399769487398e-20)
+    assert sec_eigenvalues.eigenvalues_occupation.shape == (1, 8, 4)
+    assert sec_eigenvalues.eigenvalues_occupation[0][6][1] == approx(0.0937500)
+    assert sec_eigenvalues.eigenvalues_kpoints.shape == (8, 3)
+    assert sec_eigenvalues.eigenvalues_kpoints[4][0] == 0.75
+    assert sec_eigenvalues.x_abacus_eigenvalues_number_of_planewaves[3] == 191
 
 if __name__ == '__main__':
     test_parser = parser()

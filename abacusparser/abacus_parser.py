@@ -1273,14 +1273,19 @@ class ABACUSParser(FairdiParser):
                     elif vdw_method == 'd3_bj':
                         kind = 'DFT-D3(BJ)'
                     sec_energy_vdw.energy_van_der_Waals_kind = kind
-                for key in ['XC_functional', 'correction_hartree', 'hartree_fock_X_scaled'
+                for key in ['XC_functional', 'correction_hartree', 'hartree_fock_X_scaled',
                 'total', 'reference_fermi']:
-                    val = iteration.get(key)
+                    if key in ['total', 'reference_fermi']:
+                        val = scf_iterations.get(key)
+                    else:
+                        val = iteration.get(key)
                     if val is None:
                         continue
                     if key == 'reference_fermi':
-                        val = [val]*nspin
-                    setattr(sec_scc, 'energy_%s' % key, val.to('joule').magnitude)
+                        val = [val.to('joule').magnitude]*nspin
+                        setattr(sec_scc, 'energy_%s' % key, val)
+                    else:
+                        setattr(sec_scc, 'energy_%s' % key, val.to('joule').magnitude)
 
             # eigenvalues
             eigenvalues = sub_section[-1].get('energy_occupation')
@@ -1298,6 +1303,7 @@ class ABACUSParser(FairdiParser):
                     occs.append(occ)
                 sec_eigenvalues.eigenvalues_values = (np.array(eigs)*units_mapping['eV']).to('joule')
                 sec_eigenvalues.eigenvalues_occupation = np.array(occs)
+                sec_eigenvalues.x_abacus_eigenvalues_number_of_planewaves = np.array(npws)
                 # kpoints in direct coordinates 
                 sec_eigenvalues.eigenvalues_kpoints = np.dot(np.linalg.inv(header.get('reciprocal_vectors')), np.array(kpoints).T).T
 
