@@ -35,7 +35,7 @@ from nomad.datamodel.metainfo.common_dft import Run, Method, System, XCFunctiona
 from .metainfo.abacus import section_method as xsection_method,\
     x_abacus_section_parallel, x_abacus_section_basis_sets, x_abacus_section_specie_basis_set
 
-units_mapping = {'Ha': ureg.hartree, 'Ry': ureg.rydberg, 'eV': ureg.eV,
+units_mapping = {'Ha': ureg.hartree, 'Ry': ureg.rydberg, 'eV': ureg.eV, 
                  'bohr': ureg.bohr, 'A': ureg.angstrom, 'fs': ureg.fs, 'polar': ureg.C/ureg.meter**2}
 re_float = r'[\d\.\-\+Ee]+'
 
@@ -109,7 +109,7 @@ class ABACUSInputParser(TextParser):
             ),
             Quantity(
                 xsection_method.x_abacus_mixing_method,
-                rf'\n *mixing_type\s*(\w+)', repeats=False
+                rf'\n *mixing_type\s*(\S+)', repeats=False
             ),
             Quantity(
                 xsection_method.x_abacus_mixing_beta,
@@ -137,7 +137,7 @@ class ABACUSInputParser(TextParser):
             ),
             Quantity(
                 xsection_method.x_abacus_hse_omega,
-                rf'\n *exx_hse_omega\s*({re_float})', repeats=False
+                rf'\n *exx_hse_omega\s*({re_float})', repeats=False, unit='1/bohr'
             ),
             Quantity(
                 xsection_method.x_abacus_hybrid_xc_coeff,
@@ -847,7 +847,7 @@ class ABACUSOutParser(TextParser):
             ),
             Quantity(
                 'fermi_energy_dos',
-                rf'Fermi energy is\s*({re_float})\s*Rydberg', unit='rydberg', dtype=float, repeats=True
+                rf'Fermi energy (?:\(spin = \d+\)\s*|\s*)is\s*({re_float})\s*Rydberg', dtype=float, repeats=True
             ),
             Quantity(
                 'ionic_phase',
@@ -1089,11 +1089,11 @@ class ABACUSParser(FairdiParser):
             efermi_Ry = header.get('fermi_energy_in')
             if efermi_Ry is None:
                 efermi_Ry = sec_nscf.get('fermi_energy_dos')
-            if efermi_Ry:
+            if efermi_Ry is not None:
                 if len(efermi_Ry) != nspin:
                     efermi_Ry = efermi_Ry*nspin
-                efermi_eV = np.array(efermi_Ry)*units_mapping['Ry']
-                sec_scc.energy_reference_fermi = (efermi_eV.to('joule')).magnitude
+                efermi_Ry = np.array(efermi_Ry)*units_mapping['Ry']
+                sec_scc.energy_reference_fermi = (efermi_Ry.to('joule')).magnitude
 
             band_k_points = []
             band_energies = []
@@ -1431,7 +1431,7 @@ class ABACUSParser(FairdiParser):
                 val = orbital_settings.get(key)
                 setattr(sec_basis_set, 'x_abacus_basis_sets_%s' % key, val)
 
-            for i, orb in enumerate(orbital_settings.get('orbital_information')):
+            for i, orb in enumerate(orbital_settings.get('orbital_information', [])):
                 sec_specie_basis_set = sec_basis_set.m_create(x_abacus_section_specie_basis_set)
                 sec_specie_basis_set.x_abacus_specie_basis_set_filename = os.path.basename(header.get('orbital_files')[i])
                 ln_list = []
@@ -1481,11 +1481,11 @@ class ABACUSParser(FairdiParser):
             # hybrid func
             hse_omega, hybrid_coeff = None, None
             if xc in ['HYB_GGA_XC_HSE06', 'HSE']:
-                hse_omega = self.input_parser.get('x_abacus_hse_omega')
+                hse_omega = self.input_parser.get('x_abacus_hse_omega', (0.11/ureg.bohr).to('1/m'))
                 if hse_omega is not None:
-                    sec_method.x_abacus_hse_omega = hse_omega
+                    sec_method.x_abacus_hse_omega = hse_omega.magnitude
             if xc in ['HYB_GGA_XC_HSE06', 'HSE', 'PBE0']:
-                hybrid_coeff = self.input_parser.get('x_abacus_hybrid_xc_coeff')
+                hybrid_coeff = self.input_parser.get('x_abacus_hybrid_xc_coeff', 0.25)
                 if hybrid_coeff is not None:
                     sec_method.x_abacus_hybrid_xc_coeff = hybrid_coeff
 

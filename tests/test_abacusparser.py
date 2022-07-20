@@ -127,7 +127,7 @@ def test_dos(parser):
     sec_run = archive.section_run[0]
     assert len(sec_run.section_single_configuration_calculation) == 1
     sec_scc = sec_run.section_single_configuration_calculation[0]
-    assert sec_scc.energy_reference_fermi.magnitude == approx(1.055136698179135e-18)
+    assert sec_scc.energy_reference_fermi[0].magnitude == approx(1.055136698179135e-18)
     energy_reference = sec_scc.energy_reference_fermi.to('eV').magnitude
 
     sec_dos = sec_scc.section_dos[0]
@@ -135,8 +135,6 @@ def test_dos(parser):
     assert sec_dos.dos_energies.shape == (2265, )
     assert sec_dos.dos_values.shape == (1, 2265)
 
-    # Check that an approporiately sized band gap is found at the given
-    # reference energy
     energies = sec_dos.dos_energies.to('eV').magnitude
     values = (sec_dos.dos_values/ureg.joule).to('1/eV').magnitude
     nonzero = np.unique(values.nonzero())
@@ -242,9 +240,49 @@ def test_md(parser):
     assert sec_sccs[0].energy_total.magnitude == approx(-9.855490687700974e-16)
 
 
+def test_hse(parser):
+    archive = EntryArchive()
+    parser.parse(r'data\Si-hse\running_scf.log', archive, None)
+
+    sec_run = archive.section_run[0]
+    sec_method = sec_run.section_method[0]
+    assert sec_method.section_XC_functionals[0].XC_functional_name == 'HYB_GGA_XC_HSE06'
+    assert sec_method.section_XC_functionals[0].XC_functional_parameters['$\\omega$ in m^-1'] == approx(2078698737.084507)
+    assert sec_method.section_XC_functionals[0].XC_functional_parameters['hybrid coefficient $\\alpha$'] == 0.25
+    assert sec_method.x_abacus_hse_omega.magnitude == approx(2078698737.084507)
+    assert sec_method.x_abacus_hybrid_xc_coeff == 0.25
+    assert sec_method.x_abacus_mixing_method == 'pulay'
+
+    sec_scc = sec_run.section_single_configuration_calculation[0]
+    assert sec_scc.number_of_scf_iterations == 44
+    assert sec_scc.energy_hartree_fock_X_scaled.magnitude == approx(-1.8088450960035486e-18)
+
+
+def test_spin2(parser):
+    archive = EntryArchive()
+    parser.parse(r'data\Si_spin2\running_nscf.log', archive, None)
+
+    sec_run = archive.section_run[0]
+    sec_scc = sec_run.section_single_configuration_calculation[0]
+    assert sec_scc.energy_reference_fermi[0] == 0
+    sec_dos = sec_scc.section_dos[0]
+    assert sec_dos.dos_kind == 'electronic'
+    assert sec_dos.dos_energies.shape == (2265, )
+    assert sec_dos.dos_values.shape == (2, 2265)
+    sec_k_band = sec_scc.section_k_band[0]
+    sec_k_band_segment = sec_k_band.section_k_band_segment[0]
+    assert sec_k_band_segment.band_energies.shape == (2, 1728, 8)
+    assert sec_k_band_segment.band_energies[0][1][2].magnitude == approx(1.0292510870946719e-18)
+
+    sec_method = sec_run.section_method[0]
+    assert sec_method.number_of_spin_channels == 2
+
+
 if __name__ == '__main__':
     test_parser = parser()
     #test_band(test_parser)
     #test_dos(test_parser)
     #test_scf(test_parser)
-    test_md(test_parser)
+    #test_md(test_parser)
+    #test_hse(test_parser)
+    test_spin2(test_parser)
