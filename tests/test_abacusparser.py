@@ -210,18 +210,41 @@ def test_geomopt(parser):
     assert sec_sampling_method.geometry_optimization_threshold_force == approx(1.6021766339999997e-12)
     assert sec_sampling_method.x_abacus_geometry_optimization_threshold_stress == approx(1000000.0)
 
-    assert len(sec_run.section_single_configuration_calculation) == 50
-    sec_scc = sec_run.section_single_configuration_calculation
-    assert sec_scc[20].number_of_scf_iterations == 10
-    assert sec_scc[20].atom_forces.shape == (2, 3)
-    assert sec_scc[20].atom_forces[1][0].magnitude == approx(-1.292767486795188e-11)
-    assert sec_scc[42].stress_tensor[1][1].magnitude == approx(62419700.0)
-    assert sec_scc[10].pressure.magnitude == approx(-100095500.0)
-    assert sec_scc[48].reference_fermi.magnitude == approx(-6.769734186416427e-19)
+    sec_sccs = sec_run.section_single_configuration_calculation
+    assert len(sec_sccs) == 50
+    assert sec_sccs[20].number_of_scf_iterations == 10
+    assert sec_sccs[20].atom_forces.shape == (2, 3)
+    assert sec_sccs[20].atom_forces[1][0].magnitude == approx(-1.292767486795188e-11)
+    assert sec_sccs[42].stress_tensor[1][1].magnitude == approx(62419700.0)
+    assert sec_sccs[10].pressure.magnitude == approx(-100095500.0)
+    assert sec_sccs[48].reference_fermi.magnitude == approx(-6.769734186416427e-19)
+
+
+def test_md(parser):
+    archive = EntryArchive()
+    parser.parse(r'data\Sn_md\running_md.log', archive, None)
+
+    sec_run = archive.section_run[0]
+    assert sec_run.x_abacus_md_nstep_in == 10
+    sec_run.x_abacus_md_nstep_out == 11
+
+    sec_method = sec_run.section_method[0]
+    assert sec_method.x_abacus_scf_threshold_density == approx(1e-5)
+    assert sec_method.x_abacus_mixing_beta == 0.4
+    sec_sampling_method = sec_run.section_sampling_method[0]
+    assert sec_sampling_method.sampling_method == 'molecular_dynamics'
+    assert sec_sampling_method.ensemble_type == 'NVT'
+
+    sec_sccs = sec_run.section_single_configuration_calculation
+    assert len(sec_sccs) == 11
+    assert sec_sccs[5].electronic_kinetic_energy.magnitude == approx(1.748126841263409e-18)
+    assert sec_sccs[9].temperature.magnitude == approx(1269.5343)
+    assert sec_sccs[0].energy_total.magnitude == approx(-9.855490687700974e-16)
 
 
 if __name__ == '__main__':
     test_parser = parser()
-    test_band(test_parser)
-    test_dos(test_parser)
-    test_scf(test_parser)
+    #test_band(test_parser)
+    #test_dos(test_parser)
+    #test_scf(test_parser)
+    test_md(test_parser)

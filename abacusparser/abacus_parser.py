@@ -93,7 +93,7 @@ class ABACUSInputParser(TextParser):
             ),
             Quantity(
                 'md_nstep',
-                r'\n *md_type\s*(\d+)', repeats=False
+                r'\n *md_nstep\s*(\d+)', repeats=False
             ),
             Quantity(
                 'occupations',
@@ -113,7 +113,7 @@ class ABACUSInputParser(TextParser):
             ),
             Quantity(
                 xsection_method.x_abacus_mixing_beta,
-                rf'\n *scf_thr\s*({re_float})', repeats=False
+                rf'\n *mixing_beta\s*({re_float})', repeats=False
             ),
             Quantity(
                 xsection_method.x_abacus_diagonalization_algorithm,
@@ -929,7 +929,7 @@ class ABACUSOutParser(TextParser):
             ),
             Quantity(
                 'pressure',
-                rf'Energy\s*Potential\s*Kinetic\s*Temperature\s*(?:Pressure \(KBAR\)\s*\n|\n)\s*{re_float}\s*{re_float}\s*{re_float}\s*{re_float}\s*({re_float})',
+                rf'Energy\s*Potential\s*Kinetic\s*Temperature\s*Pressure \(KBAR\)\s*\n\s*{re_float}\s*{re_float}\s*{re_float}\s*{re_float}\s*({re_float})',
                 dtype=float, unit='kilobar'
             ),
         ]
@@ -1322,14 +1322,17 @@ class ABACUSParser(FairdiParser):
 
             # md settings
             electronic_kinetic_energy = section.get('electronic_kinetic_energy')
-            if electronic_kinetic_energy:
+            if electronic_kinetic_energy is not None:
                 sec_scc.electronic_kinetic_energy = electronic_kinetic_energy.to('joule').magnitude
             temperature = section.get('temperature')
-            if temperature:
+            if temperature is not None:
                 sec_scc.temperature = temperature
             pressure = section.get('pressure')
-            if pressure:
+            if pressure is not None:
                 sec_scc.pressure = pressure.to('pascal').magnitude
+            total_energy = section.get('energy')
+            if total_energy is not None:
+                sec_scc.energy_total = total_energy.to('joule').magnitude
 
         # scf
         for section in self.out_parser.get('full_scf', []):
@@ -1344,10 +1347,12 @@ class ABACUSParser(FairdiParser):
                 self.sampling_method = methods[method]
                 for section in sections:
                     parse_section(section)
-                    if self.input_parser('md_nstep'):
-                        sec_run.x_abacus_md_nstep_in = self.input_parser('md_nstep')
-                    if section.get('md_step'):
-                        sec_run.x_abacus_md_nstep_out = section.get('md_step')
+                md_nstep_in = self.input_parser.get('md_nstep')
+                if md_nstep_in is not None:
+                    sec_run.x_abacus_md_nstep_in = md_nstep_in
+                md_nstep_out = sections[-1].get('md_step')
+                if md_nstep_out is not None:
+                    sec_run.x_abacus_md_nstep_out = md_nstep_out+1
 
         # nscf
         for section in self.out_parser.get('non_scf', []):
@@ -1477,10 +1482,12 @@ class ABACUSParser(FairdiParser):
             hse_omega, hybrid_coeff = None, None
             if xc in ['HYB_GGA_XC_HSE06', 'HSE']:
                 hse_omega = self.input_parser.get('x_abacus_hse_omega')
-                sec_method.x_abacus_hse_omega = hse_omega
+                if hse_omega is not None:
+                    sec_method.x_abacus_hse_omega = hse_omega
             if xc in ['HYB_GGA_XC_HSE06', 'HSE', 'PBE0']:
                 hybrid_coeff = self.input_parser.get('x_abacus_hybrid_xc_coeff')
-                sec_method.x_abacus_hybrid_xc_coeff = hybrid_coeff
+                if hybrid_coeff is not None:
+                    sec_method.x_abacus_hybrid_xc_coeff = hybrid_coeff
 
             if 'LDA_' in xc or 'GGA_' in xc or 'HF_' in xc or 'HYB_' in xc:
                 xc_meta_list = []
