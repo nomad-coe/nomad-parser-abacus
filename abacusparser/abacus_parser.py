@@ -35,7 +35,7 @@ from nomad.datamodel.metainfo.common_dft import Run, Method, System, XCFunctiona
 from .metainfo.abacus import section_method as xsection_method,\
     x_abacus_section_parallel, x_abacus_section_basis_sets, x_abacus_section_specie_basis_set
 
-units_mapping = {'Ha': ureg.hartree, 'Ry': ureg.rydberg, 'eV': ureg.eV, 
+units_mapping = {'Ha': ureg.hartree, 'Ry': ureg.rydberg, 'eV': ureg.eV,
                  'bohr': ureg.bohr, 'A': ureg.angstrom, 'fs': ureg.fs, 'polar': ureg.C/ureg.meter**2}
 re_float = r'[\d\.\-\+Ee]+'
 
@@ -57,7 +57,7 @@ class ABACUSInputParser(TextParser):
             ),
             Quantity(
                 'basis_type',
-                r'\n *basis_type\s*(\w+)', repeats=False, 
+                r'\n *basis_type\s*(\w+)', repeats=False,
             ),
             Quantity(
                 'x_abacus_init_velocities',
@@ -65,7 +65,7 @@ class ABACUSInputParser(TextParser):
             ),
             Quantity(
                 'xc',
-                r'\n *dft_functional\s*(\w+)', repeats=False, 
+                r'\n *dft_functional\s*(\w+)', repeats=False,
             ),
             Quantity(
                 'kpar',
@@ -97,11 +97,11 @@ class ABACUSInputParser(TextParser):
             ),
             Quantity(
                 'occupations',
-                r'\n *occupations\s*(\w+)', repeats=False, 
+                r'\n *occupations\s*(\w+)', repeats=False,
             ),
             Quantity(
                 'smearing_kind',
-                r'\n *smearing_method\s*(\w+)', repeats=False, 
+                r'\n *smearing_method\s*(\w+)', repeats=False,
             ),
             Quantity(
                 'smearing_width',
@@ -125,7 +125,7 @@ class ABACUSInputParser(TextParser):
             ),
             Quantity(
                 xsection_method.x_abacus_dispersion_correction_method,
-                r'\n *vdw_method\s*(\S+)', repeats=False, 
+                r'\n *vdw_method\s*(\S+)', repeats=False,
             ),
             Quantity(
                 xsection_method.x_abacus_gamma_algorithms,
@@ -306,7 +306,7 @@ class ABACUSOutParser(TextParser):
             val = [v.strip().split() for v in val_in.split('\n')]
             for v in val:
                 data.append(np.array(v[1:], dtype=float))
-            return np.array(data)* units_mapping['eV'] / units_mapping['A']
+            return np.array(data) * units_mapping['eV'] / units_mapping['A']
 
         def str_to_polarization(val_in):
             P = namedtuple('P', ['value', 'mod', 'vector'])
@@ -913,7 +913,7 @@ class ABACUSOutParser(TextParser):
             ),
             Quantity(
                 'self_consistent',
-                r'((STEP OF ION RELAXATION\s*:\s*\d+|RELAX IONS\s*:\s*\d+\s*\(in total: \d+\))[\s\S]+?(?:Setup the structure|\!FINAL_ETOT_IS))', 
+                r'((STEP OF ION RELAXATION\s*:\s*\d+|RELAX IONS\s*:\s*\d+\s*\(in total: \d+\))[\s\S]+?(?:Setup the structure|\!FINAL_ETOT_IS))',
                 repeats=True, sub_parser=TextParser(quantities=scf_quantities)
             )
         ]
@@ -921,7 +921,7 @@ class ABACUSOutParser(TextParser):
         fullscf_quantities = [
             Quantity(
                 'self_consistent',
-                r'([^NON]SELF-CONSISTENT[\s\S]+?\!FINAL_ETOT_IS)', 
+                r'([^NON]SELF-CONSISTENT[\s\S]+?\!FINAL_ETOT_IS)',
                 repeats=True, sub_parser=TextParser(quantities=scf_quantities)
             )
         ]
@@ -929,7 +929,7 @@ class ABACUSOutParser(TextParser):
         nonscf_quantities = [
             Quantity(
                 'nonself_consistent',
-                r'(NONSELF-CONSISTENT[\s\S]+?\|CLASS_NAME)', 
+                r'(NONSELF-CONSISTENT[\s\S]+?\|CLASS_NAME)',
                 repeats=True, sub_parser=TextParser(quantities=nscf_quantities)
             )
         ]
@@ -940,7 +940,7 @@ class ABACUSOutParser(TextParser):
             ),
             Quantity(
                 'self_consistent',
-                r'(STEP OF MOLECULAR DYNAMICS\s*:\s*\d+[\s\S]+?Energy\s*Potential\s*Kinetic)', 
+                r'(STEP OF MOLECULAR DYNAMICS\s*:\s*\d+[\s\S]+?Energy\s*Potential\s*Kinetic)',
                 repeats=True, sub_parser=TextParser(quantities=scf_quantities)
             ),
             Quantity(
@@ -1012,7 +1012,7 @@ class ABACUSOutParser(TextParser):
                 r'READING GENERAL INFORMATION([\s\S]+?)(?:[NON]*SELF-|STEP OF|RELAX CELL)', sub_parser=TextParser(quantities=header_quantities)
             ),
             Quantity(
-                'full_scf', 
+                'full_scf',
                 r'([^NON]SELF-CONSISTENT[\s\S]+?)Total\s*Time', sub_parser=TextParser(quantities=fullscf_quantities), repeats=True
             ),
             Quantity(
@@ -1057,7 +1057,7 @@ class ABACUSOutParser(TextParser):
                 str_operation=lambda x: int(x.strip().split()[0])*3600+int(x.strip().split()[1])*60+int(x.strip().split()[2]), unit='seconds'
             )
         ]
-        
+
 
 class ABACUSParser(FairdiParser):
     def __init__(self):
@@ -1109,16 +1109,16 @@ class ABACUSParser(FairdiParser):
         sec_run = self.archive.section_run[-1]
         header = self.out_parser.get('header', {})
         nspin_ori = header.get('number_of_spin_channels')
-        nspin = 1 if nspin_ori==4 else nspin_ori 
+        nspin = 1 if nspin_ori == 4 else nspin_ori
         nbands = header.get('nbands')
 
         def parse_bandstructure(section):
             sec_nscf = section.get('nonself_consistent')[-1]
-            
+
             sec_scc = sec_run.section_single_configuration_calculation[-1]
             sec_k_band = sec_scc.m_create(KBand)
             sec_k_band.band_structure_kind = 'electronic'
-            
+
             sec_k_band.reciprocal_cell = sec_run.section_system[-1].x_abacus_reciprocal_vectors
 
             # get efermi
@@ -1129,7 +1129,8 @@ class ABACUSParser(FairdiParser):
                 if len(efermi_Ry) != nspin:
                     efermi_Ry = efermi_Ry*nspin
                 efermi_Ry = np.array(efermi_Ry)*units_mapping['Ry']
-                sec_scc.energy_reference_fermi = (efermi_Ry.to('joule')).magnitude
+                sec_scc.energy_reference_fermi = (
+                    efermi_Ry.to('joule')).magnitude
 
             band_k_points = []
             band_energies = []
@@ -1138,10 +1139,13 @@ class ABACUSParser(FairdiParser):
                     if slabel == 'up':
                         band_k_points.append(state.kpoint.tolist())
                     band_energies.append(state.energies.tolist())
-            band_energies = np.reshape(band_energies, (nspin, -1, nbands))*units_mapping['eV']
+            band_energies = np.reshape(
+                band_energies, (nspin, -1, nbands))*units_mapping['eV']
             sec_k_band_segment = sec_k_band.m_create(KBandSegment)
-            sec_k_band_segment.band_k_points = np.dot(np.linalg.inv(header.get('reciprocal_vectors')), np.array(band_k_points).T).T
-            sec_k_band_segment.band_energies = band_energies.to('joule').magnitude
+            sec_k_band_segment.band_k_points = np.dot(np.linalg.inv(
+                header.get('reciprocal_vectors')), np.array(band_k_points).T).T
+            sec_k_band_segment.band_energies = band_energies.to(
+                'joule').magnitude
 
         def parse_dos():
             sec_scc = sec_run.section_single_configuration_calculation[-1]
@@ -1150,17 +1154,19 @@ class ABACUSParser(FairdiParser):
             tdos_file = 'TDOS'
             if tdos_file not in os.listdir(self.out_parser.maindir):
                 return
-            self.tdos_parser.mainfile = os.path.join(self.out_parser.maindir, tdos_file)
+            self.tdos_parser.mainfile = os.path.join(
+                self.out_parser.maindir, tdos_file)
             sec_dos = sec_scc.m_create(Dos)
             sec_dos.dos_kind = 'electronic'
             data = self.tdos_parser.data.T
             energies = data[0]*units_mapping['eV']
             sec_dos.number_of_dos_values = len(energies)
             sec_dos.dos_energies = (energies.to('joule')).magnitude
-            sec_dos.dos_values = ((data[1:]/units_mapping['eV']).to('1/J')).magnitude
+            sec_dos.dos_values = (
+                (data[1:]/units_mapping['eV']).to('1/J')).magnitude
 
-            #TODO: parse PDOS file
-                
+            # TODO: parse PDOS file
+
         def parse_scf(iteration):
             sec_scc = sec_run.section_single_configuration_calculation[-1]
             sec_scf = sec_scc.m_create(ScfIteration)
@@ -1169,13 +1175,15 @@ class ABACUSParser(FairdiParser):
             sec_scf.x_abacus_density_change_scf_iteration = density_errors
 
             # energies
-            energy_name = ['x_abacus_energy_total_harris_foulkes_estimate', 'energy_total_scf_iteration']
+            energy_name = [
+                'x_abacus_energy_total_harris_foulkes_estimate', 'energy_total_scf_iteration']
             for name in energy_name:
                 val = iteration.get(name)
                 if val is None:
                     continue
                 setattr(sec_scf, name, val.to('joule').magnitude)
-            sec_scf.energy_reference_fermi_iteration = [iteration.get('e_fermi').to('joule').magnitude]*nspin
+            sec_scf.energy_reference_fermi_iteration = [
+                iteration.get('e_fermi').to('joule').magnitude]*nspin
 
             # magnetization
             for key in ['magnetization_total', 'magnetization_absolute']:
@@ -1190,7 +1198,7 @@ class ABACUSParser(FairdiParser):
 
             # structure
             alat = header.get('alat')
-            sec_system.x_abacus_alat = alat # bohr
+            sec_system.x_abacus_alat = alat  # bohr
             lattice_vectors = header.get('lattice_vectors')*alat
             sec_system.lattice_vectors = lattice_vectors.to('meter').magnitude
             sec_system.simulation_cell = lattice_vectors.to('meter').magnitude
@@ -1200,7 +1208,8 @@ class ABACUSParser(FairdiParser):
             positions = []
             mags = []
             velocities = []
-            sec_run.x_abacus_init_velocities = self.input_parser.get('x_abacus_init_velocities', 0)
+            sec_run.x_abacus_init_velocities = self.input_parser.get(
+                'x_abacus_init_velocities', 0)
             for site in sites:
                 labels.append(site['labels'])
                 positions.append(site['positions'])
@@ -1211,39 +1220,47 @@ class ABACUSParser(FairdiParser):
             coord_class = structure.get('coord_class')
             if coord_class == 'cartesian':
                 units = structure.get('units')
-                sec_system.atom_positions = np.array(positions)*units.to('meter').magnitude
+                sec_system.atom_positions = np.array(
+                    positions)*units.to('meter').magnitude
             elif coord_class == 'direct':
-                sec_system.atom_positions = (np.array(positions)@lattice_vectors).to('meter').magnitude
+                sec_system.atom_positions = (
+                    np.array(positions)@lattice_vectors).to('meter').magnitude
             sec_system.atom_labels = labels
             if velocities:
-                sec_system.atom_velocities = (np.array(velocities)*units_mapping['A']/units_mapping['fs']).to('meter / second').magnitude
+                sec_system.atom_velocities = (np.array(
+                    velocities)*units_mapping['A']/units_mapping['fs']).to('meter / second').magnitude
             sec_system.x_abacus_atom_magnetic_moments = mags
 
             sec_system.x_abacus_cell_volume = header.get('cell_volume')
 
             reciprocal_vectors = header.get('reciprocal_vectors')*2*np.pi/alat
-            sec_system.x_abacus_reciprocal_vectors = reciprocal_vectors.to('1/meter').magnitude
+            sec_system.x_abacus_reciprocal_vectors = reciprocal_vectors.to(
+                '1/meter').magnitude
 
             # symmetry
             symmetry = header.get('symmetry')
             if symmetry:
                 sec_system_sym = sec_system.m_create(Symmetry)
-                sec_system_sym.crystal_system = symmetry.get('bravais_name')[1].lower()
+                sec_system_sym.crystal_system = symmetry.get('bravais_name')[
+                    1].lower()
                 brav_dict = {'triclinic': 'a', 'monoclinic': 'b', 'orthorhombic': 'o',
-                        'tetragonal': 't', 'hexagonal': 'h', 'cubic': 'c', 'rhombohedral': 'R'}
+                             'tetragonal': 't', 'hexagonal': 'h', 'cubic': 'c', 'rhombohedral': 'R'}
                 ibrav = symmetry.get('ibrav')
                 if ibrav:
                     sec_system.x_abacus_ibrav = ibrav
                     if ibrav in [4, 14]:
                         sec_system_sym.bravais_lattice = brav_dict[sec_system_sym.crystal_system]
                     else:
-                        sec_system_sym.bravais_lattice = brav_dict[sec_system_sym.crystal_system]+symmetry.get('bravais_name')[2][0]
-                sec_system_sym.x_abacus_point_group_schoenflies_name = symmetry.get('point_group')
-                sec_system.x_abacus_celldm = [symmetry.get('norm_a')*alat.to('angstrom').magnitude, symmetry.get('norm_b')*alat.to('angstrom').magnitude, symmetry.get('norm_c')*alat.to('angstrom').magnitude, 
-                                            symmetry.get('alpha'), symmetry.get('beta'), symmetry.get('gamma')]
+                        sec_system_sym.bravais_lattice = brav_dict[sec_system_sym.crystal_system]+symmetry.get(
+                            'bravais_name')[2][0]
+                sec_system_sym.x_abacus_point_group_schoenflies_name = symmetry.get(
+                    'point_group')
+                sec_system.x_abacus_celldm = [symmetry.get('norm_a')*alat.to('angstrom').magnitude, symmetry.get('norm_b')*alat.to('angstrom').magnitude, symmetry.get('norm_c')*alat.to('angstrom').magnitude,
+                                              symmetry.get('alpha'), symmetry.get('beta'), symmetry.get('gamma')]
                 for name in ['rotation_matrices', 'point_group_operations', 'space_group_operations']:
                     val = symmetry.get('number_of_%s' % name)
-                    setattr(sec_system_sym, 'x_abacus_number_of_%s' % name, val)
+                    setattr(sec_system_sym, 'x_abacus_number_of_%s' %
+                            name, val)
 
             # numbers
             sec_system.number_of_atoms = header.get('number_of_atoms')
@@ -1273,7 +1290,7 @@ class ABACUSParser(FairdiParser):
             # search adjacent atoms
             searching_sec = sub_section[-1].get('search_adjacent_atoms')
             if searching_sec is not None:
-                for key in ['longest_orb_rcut', 'longest_nonlocal_projector_rcut', 
+                for key in ['longest_orb_rcut', 'longest_nonlocal_projector_rcut',
                             'searching_radius', 'searching_radius_unit']:
                     val = searching_sec.get(key)
                     if val:
@@ -1282,7 +1299,7 @@ class ABACUSParser(FairdiParser):
             # grid_integration
             grid_sec = sub_section[-1].get('grid_integration')
             if grid_sec is not None:
-                for key in ['read_space_grid', 'big_cell_numbers_in_grid', 
+                for key in ['read_space_grid', 'big_cell_numbers_in_grid',
                             'meshcell_numbers_in_big_cell', 'extended_fft_grid',
                             'extended_fft_grid_dim']:
                     val = grid_sec.get(key)
@@ -1300,8 +1317,10 @@ class ABACUSParser(FairdiParser):
                 e_vdw = iteration.get('e_vdw', None)
                 if e_vdw is not None:
                     sec_energy_vdw = sec_scc.m_create(EnergyVanDerWaals)
-                    sec_energy_vdw.energy_van_der_Waals = e_vdw.to('joule').magnitude
-                    vdw_method = self.input_parser.get('x_abacus_dispersion_correction_method')
+                    sec_energy_vdw.energy_van_der_Waals = e_vdw.to(
+                        'joule').magnitude
+                    vdw_method = self.input_parser.get(
+                        'x_abacus_dispersion_correction_method')
                     if vdw_method == 'd2':
                         kind = 'DFT-D2'
                     elif vdw_method == 'd3_0':
@@ -1310,7 +1329,7 @@ class ABACUSParser(FairdiParser):
                         kind = 'DFT-D3(BJ)'
                     sec_energy_vdw.energy_van_der_Waals_kind = kind
                 for key in ['XC_functional', 'correction_hartree', 'hartree_fock_X_scaled',
-                'total', 'reference_fermi']:
+                            'total', 'reference_fermi']:
                     if key in ['total', 'reference_fermi']:
                         val = scf_iterations.get(key)
                     else:
@@ -1321,7 +1340,8 @@ class ABACUSParser(FairdiParser):
                         val = [val.to('joule').magnitude]*nspin
                         setattr(sec_scc, 'energy_%s' % key, val)
                     else:
-                        setattr(sec_scc, 'energy_%s' % key, val.to('joule').magnitude)
+                        setattr(sec_scc, 'energy_%s' %
+                                key, val.to('joule').magnitude)
 
             # eigenvalues
             eigenvalues = sub_section[-1].get('energy_occupation')
@@ -1337,11 +1357,14 @@ class ABACUSParser(FairdiParser):
                         occ.append(state.occupations)
                     eigs.append(eig)
                     occs.append(occ)
-                sec_eigenvalues.eigenvalues_values = (np.array(eigs)*units_mapping['eV']).to('joule')
+                sec_eigenvalues.eigenvalues_values = (
+                    np.array(eigs)*units_mapping['eV']).to('joule')
                 sec_eigenvalues.eigenvalues_occupation = np.array(occs)
-                sec_eigenvalues.x_abacus_eigenvalues_number_of_planewaves = np.array(npws)
-                # kpoints in direct coordinates 
-                sec_eigenvalues.eigenvalues_kpoints = np.dot(np.linalg.inv(header.get('reciprocal_vectors')), np.array(kpoints).T).T
+                sec_eigenvalues.x_abacus_eigenvalues_number_of_planewaves = np.array(
+                    npws)
+                # kpoints in direct coordinates
+                sec_eigenvalues.eigenvalues_kpoints = np.dot(np.linalg.inv(
+                    header.get('reciprocal_vectors')), np.array(kpoints).T).T
 
             # force
             forces = sub_section[-1].get('forces')
@@ -1357,9 +1380,11 @@ class ABACUSParser(FairdiParser):
                 sec_scc.pressure = pressure.to('pascal').magnitude
 
             # md settings
-            electronic_kinetic_energy = section.get('electronic_kinetic_energy')
+            electronic_kinetic_energy = section.get(
+                'electronic_kinetic_energy')
             if electronic_kinetic_energy is not None:
-                sec_scc.electronic_kinetic_energy = electronic_kinetic_energy.to('joule').magnitude
+                sec_scc.electronic_kinetic_energy = electronic_kinetic_energy.to(
+                    'joule').magnitude
             temperature = section.get('temperature')
             if temperature is not None:
                 sec_scc.temperature = temperature
@@ -1375,8 +1400,8 @@ class ABACUSParser(FairdiParser):
             parse_section(section)
 
         # relax/cell-relax/md
-        methods = {'geometry_optimization':'geometry_optimization', 
-                'molecular_dynamics':'molecular_dynamics'}
+        methods = {'geometry_optimization': 'geometry_optimization',
+                   'molecular_dynamics': 'molecular_dynamics'}
         for method in methods:
             sections = self.out_parser.get(method)
             if sections is not None:
@@ -1399,10 +1424,11 @@ class ABACUSParser(FairdiParser):
         if self.sampling_method is None:
             self.sampling_method = 'geometry_optimization'
 
-        parse_dos()    
+        parse_dos()
 
         # total time
-        sec_run.x_abacus_program_execution_time = self.out_parser.get('total_time')
+        sec_run.x_abacus_program_execution_time = self.out_parser.get(
+            'total_time')
 
     def parse_method(self):
         sec_run = self.archive.section_run[-1]
@@ -1410,7 +1436,7 @@ class ABACUSParser(FairdiParser):
         header = self.out_parser.get('header', {})
 
         # smearing
-        occupations =  self.input_parser.get('occupations', 'smearing')
+        occupations = self.input_parser.get('occupations', 'smearing')
         if occupations == 'tetrahedra':
             sec_method.smearing_kind = occupations
         elif occupations == 'fixed':
@@ -1423,34 +1449,39 @@ class ABACUSParser(FairdiParser):
                 sec_method.smearing_kind == 'gaussian'
             else:
                 sec_method.smearing_kind = 'empty'
-        sec_method.smearing_width = self.input_parser.get('smearing_width', 0.001*units_mapping['Ry']).to('joule').magnitude
+        sec_method.smearing_width = self.input_parser.get(
+            'smearing_width', 0.001*units_mapping['Ry']).to('joule').magnitude
 
         # input parameters from INPUT file
         input_file = 'INPUT'
         if input_file in os.listdir(self.out_parser.maindir):
-            self.input_parser.mainfile = os.path.join(self.out_parser.maindir, input_file)
-        input_names = ['scf_max_iteration', 'x_abacus_scf_threshold_density', 
-                        'x_abacus_mixing_method', 'x_abacus_mixing_beta', 'x_abacus_gamma_algorithms', 
-                        'x_abacus_diagonalization_algorithm', 'x_abacus_initial_magnetization_total',
-                        'x_abacus_dispersion_correction_method', 'x_abacus_exx_ccp_rmesh_times',
-                        'x_abacus_exx_dm_threshold', 'x_abacus_exx_cauchy_threshold',
-                        'x_abacus_exx_schwarz_threshold', 'x_abacus_exx_c_threshold',
-                        'x_abacus_exx_v_threshold', 'x_abacus_exx_pca_threshold']
+            self.input_parser.mainfile = os.path.join(
+                self.out_parser.maindir, input_file)
+        input_names = ['scf_max_iteration', 'x_abacus_scf_threshold_density',
+                       'x_abacus_mixing_method', 'x_abacus_mixing_beta', 'x_abacus_gamma_algorithms',
+                       'x_abacus_diagonalization_algorithm', 'x_abacus_initial_magnetization_total',
+                       'x_abacus_dispersion_correction_method', 'x_abacus_exx_ccp_rmesh_times',
+                       'x_abacus_exx_dm_threshold', 'x_abacus_exx_cauchy_threshold',
+                       'x_abacus_exx_schwarz_threshold', 'x_abacus_exx_c_threshold',
+                       'x_abacus_exx_v_threshold', 'x_abacus_exx_pca_threshold']
         for key in input_names:
             val = self.input_parser.get(key)
             if val is None:
                 continue
             setattr(sec_method, key, val)
 
-        sec_method.x_abacus_basis_type = self.input_parser.get('basis_type', 'pw')
+        sec_method.x_abacus_basis_type = self.input_parser.get(
+            'basis_type', 'pw')
 
         # pw settings
         for name in ['wavefunction', 'density']:
             cutoff = header.get('%s_cutoff' % name)
             if cutoff is None:
                 continue
-            sec_basis_set = self.archive.section_run[-1].m_create(BasisSetCellDependent)
-            sec_basis_set.basis_set_planewave_cutoff = cutoff.to('joule').magnitude
+            sec_basis_set = self.archive.section_run[-1].m_create(
+                BasisSetCellDependent)
+            sec_basis_set.basis_set_planewave_cutoff = cutoff.to(
+                'joule').magnitude
             sec_basis_set.basis_set_cell_dependent_kind = 'plane_waves'
             sec_basis_set.basis_set_cell_dependent_name = 'PW_%.1f' % cutoff.magnitude
 
@@ -1460,7 +1491,8 @@ class ABACUSParser(FairdiParser):
 
             for key in ['pw', 'sticks']:
                 val = header.get('number_of_%s_for_%s' % (key, name))
-                setattr(sec_method, 'x_abacus_number_of_%s_for_%s' % (key, name), val)
+                setattr(sec_method, 'x_abacus_number_of_%s_for_%s' %
+                        (key, name), val)
 
         # lcao settings
         orbital_settings = header.get('orbital_settings')
@@ -1471,15 +1503,18 @@ class ABACUSParser(FairdiParser):
                 setattr(sec_basis_set, 'x_abacus_basis_sets_%s' % key, val)
 
             for i, orb in enumerate(orbital_settings.get('orbital_information', [])):
-                sec_specie_basis_set = sec_basis_set.m_create(x_abacus_section_specie_basis_set)
-                sec_specie_basis_set.x_abacus_specie_basis_set_filename = os.path.basename(header.get('orbital_files')[i])
+                sec_specie_basis_set = sec_basis_set.m_create(
+                    x_abacus_section_specie_basis_set)
+                sec_specie_basis_set.x_abacus_specie_basis_set_filename = os.path.basename(
+                    header.get('orbital_files')[i])
                 ln_list = []
                 for data in orb:
                     ln_list.append([data.l, data.n])
                 sec_specie_basis_set.x_abacus_specie_basis_set_ln = ln_list
                 sec_specie_basis_set.x_abacus_specie_basis_set_rcutoff = data.rcut
                 sec_specie_basis_set.x_abacus_specie_basis_set_rmesh = data.nr
-                sec_specie_basis_set.x_abacus_specie_basis_set_number_of_orbitals = len(ln_list)
+                sec_specie_basis_set.x_abacus_specie_basis_set_number_of_orbitals = len(
+                    ln_list)
 
         if self.input_parser.get('dft_plus_u'):
             sec_method.electronic_structure_method = 'DFT+U'
@@ -1488,20 +1523,26 @@ class ABACUSParser(FairdiParser):
 
         # spin mode
         nspin_ori = header.get('number_of_spin_channels')
-        nspin = 1 if nspin_ori==4 else nspin_ori
+        nspin = 1 if nspin_ori == 4 else nspin_ori
         sec_method.number_of_spin_channels = nspin
-        sec_method.x_abacus_spin_orbit = nspin_ori==4
-        sec_method.x_abacus_noncollinear = True if header.get('atom_data')[-1].get('noncollinear_magnetization').any() else False
-        sec_method.relativity_method = ('full' if nspin_ori==4 else 'scalar')+' relativistic'
+        sec_method.x_abacus_spin_orbit = nspin_ori == 4
+        sec_method.x_abacus_noncollinear = True if header.get(
+            'atom_data')[-1].get('noncollinear_magnetization').any() else False
+        sec_method.relativity_method = (
+            'full' if nspin_ori == 4 else 'scalar')+' relativistic'
 
         # atom_kind and pseudopotential settings
         pp_xc = ''
         for i, pp in enumerate(header.get('pseudopotential')):
             sec_method_atom_kind = sec_method.m_create(MethodAtomKind)
-            sec_method_atom_kind.method_atom_kind_label = header.get('atom_data')[i].get('label')
-            sec_method_atom_kind.method_atom_kind_explicit_electrons = pp.get('valence')
-            sec_method_atom_kind.method_atom_kind_pseudopotential_name = os.path.basename(pp.get('filename', ''))
-            sec_method.x_abacus_pao_radial_cutoff = header.get('x_abacus_pao_radial_cutoff')
+            sec_method_atom_kind.method_atom_kind_label = header.get('atom_data')[
+                i].get('label')
+            sec_method_atom_kind.method_atom_kind_explicit_electrons = pp.get(
+                'valence')
+            sec_method_atom_kind.method_atom_kind_pseudopotential_name = os.path.basename(
+                pp.get('filename', ''))
+            sec_method.x_abacus_pao_radial_cutoff = header.get(
+                'x_abacus_pao_radial_cutoff')
             for key, val in pp.items():
                 if key in ['filename', 'valence'] or val is None:
                     continue
@@ -1522,18 +1563,20 @@ class ABACUSParser(FairdiParser):
             # hybrid func
             hse_omega, hybrid_coeff = None, None
             if xc in ['HYB_GGA_XC_HSE06', 'HSE']:
-                hse_omega = self.input_parser.get('x_abacus_hse_omega', (0.11/ureg.bohr).to('1/m'))
+                hse_omega = self.input_parser.get(
+                    'x_abacus_hse_omega', (0.11/ureg.bohr).to('1/m'))
                 if hse_omega is not None:
                     sec_method.x_abacus_hse_omega = hse_omega.magnitude
             if xc in ['HYB_GGA_XC_HSE06', 'HSE', 'PBE0']:
-                hybrid_coeff = self.input_parser.get('x_abacus_hybrid_xc_coeff', 0.25)
+                hybrid_coeff = self.input_parser.get(
+                    'x_abacus_hybrid_xc_coeff', 0.25)
                 if hybrid_coeff is not None:
                     sec_method.x_abacus_hybrid_xc_coeff = hybrid_coeff
 
             if 'LDA_' in xc or 'GGA_' in xc or 'HF_' in xc or 'HYB_' in xc:
                 xc_meta_list = []
                 for xc_i in xc.split('+'):
-                    xc_meta_list.append({'name':xc_i})
+                    xc_meta_list.append({'name': xc_i})
             else:
                 xc_meta_list = self._xc_map.get(xc, [])
             for xc_meta in xc_meta_list:
@@ -1541,13 +1584,16 @@ class ABACUSParser(FairdiParser):
                 sec_xc_func.XC_functional_name = xc_meta.get('name')
                 weight = xc_meta.get('weight', None)
                 if weight is not None and hybrid_coeff is not None:
-                    sec_xc_func.XC_functional_weight = weight(float(hybrid_coeff))
+                    sec_xc_func.XC_functional_weight = weight(
+                        float(hybrid_coeff))
                 xc_parameters = dict()
                 if hse_omega is not None:
                     hybrid_coeff = 0.25 if hybrid_coeff is None else hybrid_coeff
-                    xc_parameters.setdefault('$\\omega$ in m^-1', hse_omega.to('1/m').magnitude)
+                    xc_parameters.setdefault(
+                        '$\\omega$ in m^-1', hse_omega.to('1/m').magnitude)
                 if hybrid_coeff is not None:
-                    xc_parameters.setdefault('hybrid coefficient $\\alpha$', hybrid_coeff)
+                    xc_parameters.setdefault(
+                        'hybrid coefficient $\\alpha$', hybrid_coeff)
                 if xc_parameters:
                     sec_xc_func.XC_functional_parameters = xc_parameters
 
@@ -1569,37 +1615,39 @@ class ABACUSParser(FairdiParser):
         sec_run.program_version = self.out_parser.get('program_version')
         header = self.out_parser.get('header', {})
         if header.get('orbital_settings'):
-                sec_run.program_basis_set_type = 'Numeric AOs'
+            sec_run.program_basis_set_type = 'Numeric AOs'
         else:
             sec_run.program_basis_set_type = 'plane waves'
-        
+
         # start date
         date_time = self.out_parser.get('start_date_time')
         if date_time is not None:
             date_time = datetime.strptime(
-                    date_time.replace(' ', ''), '%a%b%d%H:%M:%S%Y')
+                date_time.replace(' ', ''), '%a%b%d%H:%M:%S%Y')
             sec_run.time_run_date_start = (
                 date_time - datetime(1970, 1, 1)).total_seconds()
-        
+
         # parallel
         sec_parallel = sec_run.m_create(x_abacus_section_parallel)
         sec_parallel.x_abacus_nproc = self.out_parser.get('nproc')
         for key in ['kpar', 'bndpar', 'diago_proc']:
-                val = self.input_parser.get(key)
-                if val is not None:
-                    setattr(sec_parallel, 'x_abacus_%s' % key, val)
+            val = self.input_parser.get(key)
+            if val is not None:
+                setattr(sec_parallel, 'x_abacus_%s' % key, val)
         for key in ['method', 'nb2d', 'trace_loc_row', 'trace_loc_col', 'nloc']:
             allocation_method = header.get('allocation_method')
             if allocation_method is not None:
                 val = allocation_method.get(key)
                 if val is not None:
-                        setattr(sec_parallel, 'x_abacus_allocation_%s' % key, val)
-        
+                    setattr(sec_parallel, 'x_abacus_allocation_%s' % key, val)
+
         # input files
         self.parse_method()
         self.parse_configurations()
-        sec_run.x_abacus_stru_filename = self.input_parser.get('stru_filename', 'STRU')
-        sec_run.x_abacus_kpt_filename = self.input_parser.get('kpt_filename', 'KPT')
+        sec_run.x_abacus_stru_filename = self.input_parser.get(
+            'stru_filename', 'STRU')
+        sec_run.x_abacus_kpt_filename = self.input_parser.get(
+            'kpt_filename', 'KPT')
         sec_run.x_abacus_input_filename = self.out_parser.get('input_filename')
         for key in ['basis_set_dirname', 'pseudopotential_dirname']:
             val = self.out_parser.get(key)
@@ -1611,24 +1659,26 @@ class ABACUSParser(FairdiParser):
             sec_sampling_method = sec_run.m_create(SamplingMethod)
             sec_sampling_method.sampling_method = self.sampling_method
             if self.sampling_method == 'molecular_dynamics':
-                    md_type = self.input_parser.get('md_type')
-                    if md_type == 0:
-                        sec_sampling_method.ensemble_type = 'NVE'
-                    elif md_type in [1, 2, 3]:
-                        sec_sampling_method.ensemble_type = 'NVT'
+                md_type = self.input_parser.get('md_type')
+                if md_type == 0:
+                    sec_sampling_method.ensemble_type = 'NVE'
+                elif md_type in [1, 2, 3]:
+                    sec_sampling_method.ensemble_type = 'NVT'
             elif self.sampling_method == 'geometry_optimization':
                 force_threshold = self.out_parser.get('force_threshold')
                 stress_threshold = self.out_parser.get('stress_threshold')
                 if force_threshold:
-                        sec_sampling_method.geometry_optimization_threshold_force = force_threshold.to('newton').magnitude
+                    sec_sampling_method.geometry_optimization_threshold_force = force_threshold.to(
+                        'newton').magnitude
                 if stress_threshold:
-                    sec_sampling_method.x_abacus_geometry_optimization_threshold_stress = stress_threshold.to('pascal').magnitude
-        
+                    sec_sampling_method.x_abacus_geometry_optimization_threshold_stress = stress_threshold.to(
+                        'pascal').magnitude
+
         # end date
         date_time = self.out_parser.get('finish_date_time')
         if date_time is not None:
-                date_time = datetime.strptime(
-                    date_time.replace(' ', ''), '%a%b%d%H:%M:%S%Y')
-                sec_run.time_run_date_end = (
-                    date_time - datetime(1970, 1, 1)).total_seconds()
-                sec_run.run_clean_end = True
+            date_time = datetime.strptime(
+                date_time.replace(' ', ''), '%a%b%d%H:%M:%S%Y')
+            sec_run.time_run_date_end = (
+                date_time - datetime(1970, 1, 1)).total_seconds()
+            sec_run.run_clean_end = True

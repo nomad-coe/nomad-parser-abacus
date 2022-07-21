@@ -51,7 +51,8 @@ def test_band(parser):
     assert sec_run.x_abacus_input_filename == 'INPUT'
     assert sec_run.x_abacus_kpt_filename == 'KLINES'
     assert sec_run.section_basis_set_cell_dependent[0].basis_set_cell_dependent_name == 'PW_50.0'
-    assert sec_run.section_basis_set_cell_dependent[1].basis_set_planewave_cutoff.magnitude == approx(4.35974472220717e-16)
+    assert sec_run.section_basis_set_cell_dependent[1].basis_set_planewave_cutoff.magnitude == approx(
+        4.35974472220717e-16)
     assert sec_run.section_sampling_method[0].sampling_method == 'geometry_optimization'
     assert sec_run.time_run_date_end.magnitude == approx(1657036249.0)
     assert sec_run.run_clean_end
@@ -68,7 +69,8 @@ def test_band(parser):
     assert sec_basis_sets.x_abacus_basis_sets_kmesh == 711
     sec_specie_basis_set = sec_basis_sets.x_abacus_section_specie_basis_set
     assert sec_specie_basis_set[0].x_abacus_specie_basis_set_filename == 'Si_lda_8.0au_50Ry_2s2p1d'
-    assert (sec_specie_basis_set[0].x_abacus_specie_basis_set_ln == [[0, 0], [0, 1], [1, 0], [1, 1], [2, 0]]).all()
+    assert (sec_specie_basis_set[0].x_abacus_specie_basis_set_ln == [
+            [0, 0], [0, 1], [1, 0], [1, 1], [2, 0]]).all()
     assert sec_specie_basis_set[0].x_abacus_specie_basis_set_rcutoff.magnitude == 8
     assert sec_specie_basis_set[0].x_abacus_specie_basis_set_rmesh == 801
     assert sec_method.number_of_spin_channels == 1
@@ -93,7 +95,8 @@ def test_band(parser):
     assert sec_system.atom_labels == ['Si', 'Si']
     assert sec_system.atom_positions[1][0].magnitude == approx(1.34940189e-10)
     assert sec_system.x_abacus_cell_volume.magnitude == 265.302
-    assert sec_system.x_abacus_reciprocal_vectors[2][0].magnitude == approx(-1.16406857e+10)
+    assert sec_system.x_abacus_reciprocal_vectors[2][0].magnitude == approx(
+        -1.16406857e+10)
     assert sec_system.number_of_atoms == 2
     assert sec_system.x_abacus_number_of_species == 1
     assert sec_system.x_abacus_number_of_electrons_out[0] == 8
@@ -109,7 +112,8 @@ def test_band(parser):
     assert sec_scc.x_abacus_meshcell_numbers_in_big_cell[1] == 2
     assert sec_scc.x_abacus_extended_fft_grid[0] == 25
     assert sec_scc.x_abacus_extended_fft_grid_dim[2] == 69
-    assert sec_scc.energy_reference_fermi.magnitude == approx(1.055136698179135e-18)
+    assert sec_scc.energy_reference_fermi.magnitude == approx(
+        1.055136698179135e-18)
     sec_k_band = sec_scc.section_k_band[0]
     assert sec_k_band.band_structure_kind == 'electronic'
     assert sec_k_band.reciprocal_cell[0][0].magnitude == approx(1.16406857e+10)
@@ -117,7 +121,8 @@ def test_band(parser):
     assert sec_k_band_segment.band_k_points.shape == (101, 3)
     assert sec_k_band_segment.band_k_points[3][2] == 0.425
     assert sec_k_band_segment.band_energies.shape == (1, 101, 8)
-    assert sec_k_band_segment.band_energies[0][4][4].magnitude == approx(1.14715847e-18)
+    assert sec_k_band_segment.band_energies[0][4][4].magnitude == approx(
+        1.14715847e-18)
 
 
 def test_dos(parser):
@@ -127,7 +132,8 @@ def test_dos(parser):
     sec_run = archive.section_run[0]
     assert len(sec_run.section_single_configuration_calculation) == 1
     sec_scc = sec_run.section_single_configuration_calculation[0]
-    assert sec_scc.energy_reference_fermi[0].magnitude == approx(1.055136698179135e-18)
+    assert sec_scc.energy_reference_fermi[0].magnitude == approx(
+        1.055136698179135e-18)
     energy_reference = sec_scc.energy_reference_fermi.to('eV').magnitude
 
     sec_dos = sec_scc.section_dos[0]
@@ -140,7 +146,8 @@ def test_dos(parser):
     nonzero = np.unique(values.nonzero())
     energies = energies[nonzero]
     energies.sort()
-    lowest_unoccupied_index = np.searchsorted(energies, energy_reference, "right")[0]
+    lowest_unoccupied_index = np.searchsorted(
+        energies, energy_reference, "right")[0]
     highest_occupied_index = lowest_unoccupied_index - 1
     gap = energies[lowest_unoccupied_index] - energies[highest_occupied_index]
     assert gap == approx(0.01)
@@ -172,18 +179,25 @@ def test_scf(parser):
     assert len(sec_run.section_single_configuration_calculation) == 1
     sec_scc = sec_run.section_single_configuration_calculation[0]
     assert len(sec_scc.section_scf_iteration) == sec_scc.number_of_scf_iterations
-    assert sec_scc.energy_XC_functional.magnitude == approx(-1.0521129713661978e-17)
-    assert sec_scc.energy_correction_hartree.magnitude == approx(2.402022465119184e-18)
+    assert sec_scc.energy_XC_functional.magnitude == approx(
+        -1.0521129713661978e-17)
+    assert sec_scc.energy_correction_hartree.magnitude == approx(
+        2.402022465119184e-18)
     assert sec_scc.energy_hartree_fock_X_scaled.magnitude == approx(0.0)
     assert sec_scc.energy_total.magnitude == approx(-3.452765284822062e-17)
     sec_scf = sec_scc.section_scf_iteration
-    assert sec_scf[5].x_abacus_density_change_scf_iteration == approx(8.46207322367e-10)
-    assert sec_scf[5].x_abacus_energy_total_harris_foulkes_estimate.magnitude == approx(-3.452765284886149e-17)
-    assert sec_scf[0].energy_total_scf_iteration.magnitude == approx(-3.451916016970848e-17)
-    assert sec_scf[2].energy_reference_fermi_iteration[0].magnitude == approx(1.0082248524478308e-18)
+    assert sec_scf[5].x_abacus_density_change_scf_iteration == approx(
+        8.46207322367e-10)
+    assert sec_scf[5].x_abacus_energy_total_harris_foulkes_estimate.magnitude == approx(
+        -3.452765284886149e-17)
+    assert sec_scf[0].energy_total_scf_iteration.magnitude == approx(
+        -3.451916016970848e-17)
+    assert sec_scf[2].energy_reference_fermi_iteration[0].magnitude == approx(
+        1.0082248524478308e-18)
     sec_eigenvalues = sec_scc.section_eigenvalues[0]
     assert sec_eigenvalues.eigenvalues_values.shape == (1, 8, 4)
-    assert sec_eigenvalues.eigenvalues_values[0][4][1].magnitude == approx(-2.3289399769487398e-20)
+    assert sec_eigenvalues.eigenvalues_values[0][4][1].magnitude == approx(
+        -2.3289399769487398e-20)
     assert sec_eigenvalues.eigenvalues_occupation.shape == (1, 8, 4)
     assert sec_eigenvalues.eigenvalues_occupation[0][6][1] == approx(0.0937500)
     assert sec_eigenvalues.eigenvalues_kpoints.shape == (8, 3)
@@ -205,17 +219,21 @@ def test_geomopt(parser):
 
     sec_sampling_method = sec_run.section_sampling_method[0]
     assert sec_sampling_method.sampling_method == 'geometry_optimization'
-    assert sec_sampling_method.geometry_optimization_threshold_force == approx(1.6021766339999997e-12)
-    assert sec_sampling_method.x_abacus_geometry_optimization_threshold_stress == approx(1000000.0)
+    assert sec_sampling_method.geometry_optimization_threshold_force == approx(
+        1.6021766339999997e-12)
+    assert sec_sampling_method.x_abacus_geometry_optimization_threshold_stress == approx(
+        1000000.0)
 
     sec_sccs = sec_run.section_single_configuration_calculation
     assert len(sec_sccs) == 50
     assert sec_sccs[20].number_of_scf_iterations == 10
     assert sec_sccs[20].atom_forces.shape == (2, 3)
-    assert sec_sccs[20].atom_forces[1][0].magnitude == approx(-1.292767486795188e-11)
+    assert sec_sccs[20].atom_forces[1][0].magnitude == approx(
+        -1.292767486795188e-11)
     assert sec_sccs[42].stress_tensor[1][1].magnitude == approx(62419700.0)
     assert sec_sccs[10].pressure.magnitude == approx(-100095500.0)
-    assert sec_sccs[48].reference_fermi.magnitude == approx(-6.769734186416427e-19)
+    assert sec_sccs[48].reference_fermi.magnitude == approx(
+        -6.769734186416427e-19)
 
 
 def test_md(parser):
@@ -235,7 +253,8 @@ def test_md(parser):
 
     sec_sccs = sec_run.section_single_configuration_calculation
     assert len(sec_sccs) == 11
-    assert sec_sccs[5].electronic_kinetic_energy.magnitude == approx(1.748126841263409e-18)
+    assert sec_sccs[5].electronic_kinetic_energy.magnitude == approx(
+        1.748126841263409e-18)
     assert sec_sccs[9].temperature.magnitude == approx(1269.5343)
     assert sec_sccs[0].energy_total.magnitude == approx(-9.855490687700974e-16)
 
@@ -243,13 +262,14 @@ def test_md(parser):
 def test_hse(parser):
     archive = EntryArchive()
     parser.parse(r'data\Si-hse\running_scf.log', archive, None)
-    
+
     sec_run = archive.section_run[0]
     assert sec_run.x_abacus_program_execution_time.magnitude == 8837
 
     sec_method = sec_run.section_method[0]
     assert sec_method.section_XC_functionals[0].XC_functional_name == 'HYB_GGA_XC_HSE06'
-    assert sec_method.section_XC_functionals[0].XC_functional_parameters['$\\omega$ in m^-1'] == approx(2078698737.084507)
+    assert sec_method.section_XC_functionals[0].XC_functional_parameters['$\\omega$ in m^-1'] == approx(
+        2078698737.084507)
     assert sec_method.section_XC_functionals[0].XC_functional_parameters['hybrid coefficient $\\alpha$'] == 0.25
     assert sec_method.x_abacus_hse_omega.magnitude == approx(2078698737.084507)
     assert sec_method.x_abacus_hybrid_xc_coeff == 0.25
@@ -263,11 +283,13 @@ def test_hse(parser):
 
     sec_system = sec_run.section_system[0]
     assert sec_system.atom_labels == ['Sb', 'Ga']
-    assert sec_system.atom_positions[1][2].magnitude == approx(4.571926147831032e-10)
+    assert sec_system.atom_positions[1][2].magnitude == approx(
+        4.571926147831032e-10)
 
     sec_scc = sec_run.section_single_configuration_calculation[0]
     assert sec_scc.number_of_scf_iterations == 55
-    assert sec_scc.energy_hartree_fock_X_scaled.magnitude == approx(-1.2417912255666503e-17)
+    assert sec_scc.energy_hartree_fock_X_scaled.magnitude == approx(
+        -1.2417912255666503e-17)
 
 
 def test_spin2(parser):
@@ -284,7 +306,8 @@ def test_spin2(parser):
     sec_k_band = sec_scc.section_k_band[0]
     sec_k_band_segment = sec_k_band.section_k_band_segment[0]
     assert sec_k_band_segment.band_energies.shape == (2, 1728, 8)
-    assert sec_k_band_segment.band_energies[0][1][2].magnitude == approx(1.0292510870946719e-18)
+    assert sec_k_band_segment.band_energies[0][1][2].magnitude == approx(
+        1.0292510870946719e-18)
 
     sec_method = sec_run.section_method[0]
     assert sec_method.number_of_spin_channels == 2
@@ -305,10 +328,13 @@ def test_dftu(parser):
     assert sec_method.electronic_structure_method == 'DFT+U'
 
     sec_system = sec_run.section_system[0]
-    assert sec_system.atom_labels == ['Mn', 'Mn', 'Bi', 'Bi', 'Bi', 'Bi', 'Te', 'Te', 'Te', 'Te', 'Te', 'Te', 'Te', 'Te']
+    assert sec_system.atom_labels == [
+        'Mn', 'Mn', 'Bi', 'Bi', 'Bi', 'Bi', 'Te', 'Te', 'Te', 'Te', 'Te', 'Te', 'Te', 'Te']
     assert sec_system.x_abacus_number_of_species == 4
 
     sec_scc = sec_run.section_single_configuration_calculation[0]
     sec_scf = sec_scc.section_scf_iteration
-    assert sec_scf[9].x_abacus_magnetization_total[2].magnitude == approx(-0.00029174)
-    assert sec_scf[16].x_abacus_magnetization_absolute.magnitude == approx(10.04743427)
+    assert sec_scf[9].x_abacus_magnetization_total[2].magnitude == approx(
+        -0.00029174)
+    assert sec_scf[16].x_abacus_magnetization_absolute.magnitude == approx(
+        10.04743427)

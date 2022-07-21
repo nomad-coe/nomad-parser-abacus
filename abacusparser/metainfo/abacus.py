@@ -41,6 +41,7 @@ class x_abacus_input_settings(MCategory):
     m_def = Category(
         a_legacy=LegacyDefinition(name='x_abacus_input_settings'))
 
+
 class x_abacus_exx_settings(MCategory):
     '''
     Parameters are relevant when using hybrid functionals.
@@ -48,6 +49,7 @@ class x_abacus_exx_settings(MCategory):
 
     m_def = Category(
         a_legacy=LegacyDefinition(name='x_abacus_exx_settings'))
+
 
 class x_abacus_section_parallel(MSection):
     '''
@@ -137,14 +139,15 @@ class x_abacus_section_parallel(MSection):
         ''',
         categories=[public.settings_run],
         a_legacy=LegacyDefinition(name='x_abacus_allocation_nloc'))
-    
+
 
 class x_abacus_section_specie_basis_set(MSection):
     '''
     definition of each basis set 
     '''
 
-    m_def = Section(validate=False, a_legacy=LegacyDefinition(name='x_abacus_section_specie_basis_set'))
+    m_def = Section(validate=False, a_legacy=LegacyDefinition(
+        name='x_abacus_section_specie_basis_set'))
 
     x_abacus_specie_basis_set_filename = Quantity(
         type=str,
@@ -539,7 +542,8 @@ class section_method(public.section_method):
         description='''
         Type of exchange-correlation functional used in calculation. 
         ''',
-        categories=[x_abacus_input_settings, public.settings_XC, public.settings_potential_energy_surface, public.settings_XC_functional],
+        categories=[x_abacus_input_settings, public.settings_XC,
+                    public.settings_potential_energy_surface, public.settings_XC_functional],
         a_legacy=LegacyDefinition(name='x_abacus_xc_functional'))
 
     x_abacus_pao_radial_cutoff = Quantity(
@@ -558,7 +562,8 @@ class section_method(public.section_method):
         description='''
         HSE omega
         ''',
-        categories=[x_abacus_input_settings, x_abacus_exx_settings, public.settings_XC, public.settings_potential_energy_surface, public.settings_XC_functional],
+        categories=[x_abacus_input_settings, x_abacus_exx_settings, public.settings_XC,
+                    public.settings_potential_energy_surface, public.settings_XC_functional],
         a_legacy=LegacyDefinition(name='x_abacus_hse_omega'))
 
     x_abacus_hybrid_xc_coeff = Quantity(
@@ -567,7 +572,8 @@ class section_method(public.section_method):
         description='''
         Mixing parameter of hybrid functionals
         ''',
-        categories=[x_abacus_input_settings, x_abacus_exx_settings, public.settings_XC, public.settings_potential_energy_surface, public.settings_XC_functional],
+        categories=[x_abacus_input_settings, x_abacus_exx_settings, public.settings_XC,
+                    public.settings_potential_energy_surface, public.settings_XC_functional],
         a_legacy=LegacyDefinition(name='x_abacus_hybrid_xc_coeff'))
 
     x_abacus_number_of_pw_for_wavefunction = Quantity(
@@ -612,7 +618,8 @@ class section_method(public.section_method):
         description='''
         This parameter determines how many times larger the radial mesh required for calculating Columb potential is to that of atomic orbitals
         ''',
-        categories=[x_abacus_input_settings, x_abacus_exx_settings, public.settings_XC, public.settings_potential_energy_surface, public.settings_XC_functional],
+        categories=[x_abacus_input_settings, x_abacus_exx_settings, public.settings_XC,
+                    public.settings_potential_energy_surface, public.settings_XC_functional],
         a_legacy=LegacyDefinition(name='x_abacus_exx_ccp_rmesh_times'))
 
     x_abacus_exx_dm_threshold = Quantity(
@@ -621,7 +628,8 @@ class section_method(public.section_method):
         description='''
         Smaller values of the density matrix can be truncated to accelerate calculation.
         ''',
-        categories=[x_abacus_input_settings, x_abacus_exx_settings, public.settings_XC, public.settings_potential_energy_surface, public.settings_XC_functional],
+        categories=[x_abacus_input_settings, x_abacus_exx_settings, public.settings_XC,
+                    public.settings_potential_energy_surface, public.settings_XC_functional],
         a_legacy=LegacyDefinition(name='x_abacus_exx_dm_threshold'))
 
     x_abacus_exx_cauchy_threshold = Quantity(
@@ -630,7 +638,8 @@ class section_method(public.section_method):
         description='''
         Using Cauchy-Schwartz inequality to find an upper bound of each Fock exchange matrix element before carrying out explicit evaluations
         ''',
-        categories=[x_abacus_input_settings, x_abacus_exx_settings, public.settings_XC, public.settings_potential_energy_surface, public.settings_XC_functional],
+        categories=[x_abacus_input_settings, x_abacus_exx_settings, public.settings_XC,
+                    public.settings_potential_energy_surface, public.settings_XC_functional],
         a_legacy=LegacyDefinition(name='x_abacus_exx_cauchy_threshold'))
 
     x_abacus_exx_schwarz_threshold = Quantity(
@@ -639,7 +648,8 @@ class section_method(public.section_method):
         description='''
         Using Cauchy-Schwartz inequality to find an upper bound of each four-center integral element before carrying out explicit evaluations
         ''',
-        categories=[x_abacus_input_settings, x_abacus_exx_settings, public.settings_XC, public.settings_potential_energy_surface, public.settings_XC_functional],
+        categories=[x_abacus_input_settings, x_abacus_exx_settings, public.settings_XC,
+                    public.settings_potential_energy_surface, public.settings_XC_functional],
         a_legacy=LegacyDefinition(name='x_abacus_exx_schwarz_threshold'))
 
     x_abacus_exx_c_threshold = Quantity(
@@ -648,7 +658,8 @@ class section_method(public.section_method):
         description='''
         Smaller components of the C matrix is neglected to accelerate calculation
         ''',
-        categories=[x_abacus_input_settings, x_abacus_exx_settings, public.settings_XC, public.settings_potential_energy_surface, public.settings_XC_functional],
+        categories=[x_abacus_input_settings, x_abacus_exx_settings, public.settings_XC,
+                    public.settings_potential_energy_surface, public.settings_XC_functional],
         a_legacy=LegacyDefinition(name='x_abacus_exx_c_threshold'))
 
     x_abacus_exx_v_threshold = Quantity(
@@ -657,7 +668,8 @@ class section_method(public.section_method):
         description='''
         Smaller components of the V matrix is neglected to accelerate calculation
         ''',
-        categories=[x_abacus_input_settings, x_abacus_exx_settings, public.settings_XC, public.settings_potential_energy_surface, public.settings_XC_functional],
+        categories=[x_abacus_input_settings, x_abacus_exx_settings, public.settings_XC,
+                    public.settings_potential_energy_surface, public.settings_XC_functional],
         a_legacy=LegacyDefinition(name='x_abacus_exx_v_threshold'))
 
     x_abacus_exx_pca_threshold = Quantity(
@@ -666,7 +678,8 @@ class section_method(public.section_method):
         description='''
         The size of basis of auxiliary basis functions is reduced using principal component analysis.
         ''',
-        categories=[x_abacus_input_settings, x_abacus_exx_settings, public.settings_XC, public.settings_potential_energy_surface, public.settings_XC_functional],
+        categories=[x_abacus_input_settings, x_abacus_exx_settings, public.settings_XC,
+                    public.settings_potential_energy_surface, public.settings_XC_functional],
         a_legacy=LegacyDefinition(name='x_abacus_exx_pca_threshold'))
 
     x_abacus_section_basis_sets = SubSection(
@@ -803,7 +816,7 @@ class section_symmetry(public.section_symmetry):
         categories=[public.configuration_core],
         a_legacy=LegacyDefinition(name='x_abacus_number_of_point_group_operations'))
 
-    x_abacus_number_of_space_group_operations= Quantity(
+    x_abacus_number_of_space_group_operations = Quantity(
         type=np.dtype(np.int32),
         shape=[],
         description='''
@@ -814,7 +827,8 @@ class section_symmetry(public.section_symmetry):
 
 
 class section_method_atom_kind(public.section_method_atom_kind):
-    m_def = Section(validate=False, extends_base_section=True, a_legacy=LegacyDefinition(name='section_method_atom_kind'))
+    m_def = Section(validate=False, extends_base_section=True,
+                    a_legacy=LegacyDefinition(name='section_method_atom_kind'))
 
     x_abacus_pp_type = Quantity(
         type=str,
@@ -859,7 +873,8 @@ class section_method_atom_kind(public.section_method_atom_kind):
 
 class section_scf_iteration(public.section_scf_iteration):
 
-    m_def = Section(validate=False, extends_base_section=True, a_legacy=LegacyDefinition(name='section_scf_iteration'))
+    m_def = Section(validate=False, extends_base_section=True,
+                    a_legacy=LegacyDefinition(name='section_scf_iteration'))
 
     x_abacus_density_change_scf_iteration = Quantity(
         type=np.dtype(np.float64),
@@ -879,7 +894,8 @@ class section_scf_iteration(public.section_scf_iteration):
         Stores the change of charge density with respect to the previous self-consistent
         field (SCF) iteration.
         ''',
-        categories=[common.EnergyComponent, common.EnergyValue, common.EnergyTotalPotential],
+        categories=[common.EnergyComponent,
+                    common.EnergyValue, common.EnergyTotalPotential],
         a_legacy=LegacyDefinition(name='x_abacus_energy_total_harris_foulkes_estimate'))
 
     x_abacus_magnetization_total = Quantity(
@@ -903,7 +919,8 @@ class section_scf_iteration(public.section_scf_iteration):
 
 class section_eigenvalues(public.section_eigenvalues):
 
-    m_def = Section(validate=False, extends_base_section=True, a_legacy=LegacyDefinition(name='section_eigenvalues'))
+    m_def = Section(validate=False, extends_base_section=True,
+                    a_legacy=LegacyDefinition(name='section_eigenvalues'))
 
     x_abacus_eigenvalues_number_of_planewaves = Quantity(
         type=np.dtype(np.int32),
@@ -916,8 +933,9 @@ class section_eigenvalues(public.section_eigenvalues):
 
 class section_sampling_method(public.section_sampling_method):
 
-    m_def = Section(validate=False, extends_base_section=True, a_legacy=LegacyDefinition(name='section_sampling_method'))
-    
+    m_def = Section(validate=False, extends_base_section=True,
+                    a_legacy=LegacyDefinition(name='section_sampling_method'))
+
     x_abacus_geometry_optimization_threshold_stress = Quantity(
         type=np.dtype(np.float64),
         shape=[],
@@ -925,7 +943,9 @@ class section_sampling_method(public.section_sampling_method):
         description='''
         The threshold of the stress convergence, it indicates the largest stress among all the directions
         ''',
-        categories=[public.SettingsGeometryOptimization, public.SettingsSampling],
+        categories=[public.SettingsGeometryOptimization,
+                    public.SettingsSampling],
         a_legacy=LegacyDefinition(name='x_abacus_geometry_optimization_threshold_stress'))
+
 
 m_package.__init_metainfo__()
