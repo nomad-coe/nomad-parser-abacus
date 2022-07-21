@@ -243,8 +243,10 @@ def test_md(parser):
 def test_hse(parser):
     archive = EntryArchive()
     parser.parse(r'data\Si-hse\running_scf.log', archive, None)
-
+    
     sec_run = archive.section_run[0]
+    assert sec_run.x_abacus_program_execution_time.magnitude == 8837
+
     sec_method = sec_run.section_method[0]
     assert sec_method.section_XC_functionals[0].XC_functional_name == 'HYB_GGA_XC_HSE06'
     assert sec_method.section_XC_functionals[0].XC_functional_parameters['$\\omega$ in m^-1'] == approx(2078698737.084507)
@@ -252,10 +254,20 @@ def test_hse(parser):
     assert sec_method.x_abacus_hse_omega.magnitude == approx(2078698737.084507)
     assert sec_method.x_abacus_hybrid_xc_coeff == 0.25
     assert sec_method.x_abacus_mixing_method == 'pulay'
+    assert sec_method.x_abacus_exx_ccp_rmesh_times == 1.5
+    assert sec_method.x_abacus_exx_dm_threshold == approx(0.0005)
+    assert sec_method.x_abacus_exx_cauchy_threshold == approx(1e-08)
+    assert sec_method.x_abacus_exx_schwarz_threshold == approx(5e-05)
+    assert sec_method.x_abacus_exx_c_threshold == approx(5e-05)
+    assert sec_method.x_abacus_exx_pca_threshold == approx(0.0001)
+
+    sec_system = sec_run.section_system[0]
+    assert sec_system.atom_labels == ['Sb', 'Ga']
+    assert sec_system.atom_positions[1][2].magnitude == approx(4.571926147831032e-10)
 
     sec_scc = sec_run.section_single_configuration_calculation[0]
-    assert sec_scc.number_of_scf_iterations == 44
-    assert sec_scc.energy_hartree_fock_X_scaled.magnitude == approx(-1.8088450960035486e-18)
+    assert sec_scc.number_of_scf_iterations == 55
+    assert sec_scc.energy_hartree_fock_X_scaled.magnitude == approx(-1.2417912255666503e-17)
 
 
 def test_spin2(parser):
@@ -280,9 +292,9 @@ def test_spin2(parser):
 
 if __name__ == '__main__':
     test_parser = parser()
-    #test_band(test_parser)
-    #test_dos(test_parser)
-    #test_scf(test_parser)
-    #test_md(test_parser)
-    #test_hse(test_parser)
+    test_band(test_parser)
+    test_dos(test_parser)
+    test_scf(test_parser)
+    test_md(test_parser)
+    test_hse(test_parser)
     test_spin2(test_parser)

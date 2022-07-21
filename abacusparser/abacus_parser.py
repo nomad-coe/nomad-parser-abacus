@@ -143,6 +143,34 @@ class ABACUSInputParser(TextParser):
                 xsection_method.x_abacus_hybrid_xc_coeff,
                 rf'\n *exx_hybrid_alpha\s*({re_float})', repeats=False
             ),
+            Quantity(
+                xsection_method.x_abacus_exx_ccp_rmesh_times,
+                rf'\n *exx_ccp_rmesh_times\s*({re_float})', repeats=False
+            ),
+            Quantity(
+                xsection_method.x_abacus_exx_dm_threshold,
+                rf'\n *exx_dm_threshold\s*({re_float})', repeats=False
+            ),
+            Quantity(
+                xsection_method.x_abacus_exx_cauchy_threshold,
+                rf'\n *exx_cauchy_threshold\s*({re_float})', repeats=False
+            ),
+            Quantity(
+                xsection_method.x_abacus_exx_schwarz_threshold,
+                rf'\n *exx_schwarz_threshold\s*({re_float})', repeats=False
+            ),
+            Quantity(
+                xsection_method.x_abacus_exx_c_threshold,
+                rf'\n *exx_c_threshold\s*({re_float})', repeats=False
+            ),
+            Quantity(
+                xsection_method.x_abacus_exx_v_threshold,
+                rf'\n *exx_v_threshold\s*({re_float})', repeats=False
+            ),
+            Quantity(
+                xsection_method.x_abacus_exx_pca_threshold,
+                rf'\n *exx_pca_threshold\s*({re_float})', repeats=False
+            )
         ]
 
 
@@ -304,8 +332,12 @@ class ABACUSOutParser(TextParser):
 
         structure_quantities = [
             Quantity(
-                'sites', rf'tau[cd]_([a-zA-Z]+)\d+\s+({re_float})\s+({re_float})\s+({re_float})\s+({re_float})\s+({re_float})\s+({re_float})\s+({re_float})|tau[cd]_([a-zA-Z]+)\d+\s+({re_float})\s+({re_float})\s+({re_float})\s+({re_float})\s+',
-                dtype=float, repeats=True,  str_operation=str_to_sites
+                'sites', rf'tau[cd]_([a-zA-Z]+)\d+\s+({re_float})\s+({re_float})\s+({re_float})\s+({re_float})\s+({re_float})\s+({re_float})\s+({re_float})',
+                repeats=True,  str_operation=str_to_sites
+            ),
+            Quantity(
+                'sites', rf'tau[cd]_([a-zA-Z]+)\d+\s+({re_float})\s+({re_float})\s+({re_float})\s+({re_float})',
+                repeats=True,  str_operation=str_to_sites
             ),
             Quantity(
                 'units', rf'UNIT = ({re_float}) Bohr',
@@ -431,7 +463,7 @@ class ABACUSOutParser(TextParser):
             ),
             Quantity(
                 'positions',
-                rf'(CARTESIAN COORDINATES \( UNIT = {re_float} Bohr \)\.+\n\s*atom\s*x\s*y\s*z\s*mag\s*vx\s*vy\s*vz\s*\n[\s\S]+?)\n\n|(DIRECT COORDINATES\n\s*atom\s*x\s*y\s*z\s*mag\s*vx\s*vy\s*vz\s*\n[\s\S]+?)\n\n',
+                rf'(CARTESIAN COORDINATES \( UNIT = {re_float} Bohr \)\.+\n\s*atom\s*x\s*y\s*z\s*mag(\s*vx\s*vy\s*vz\s*|\s*)\n[\s\S]+?)\n\n|(DIRECT COORDINATES\n\s*atom\s*x\s*y\s*z\s*mag(\s*vx\s*vy\s*vz\s*|\s*)\n[\s\S]+?)\n\n',
                 sub_parser=TextParser(quantities=structure_quantities), convert=False, repeats=False,
             ),
             Quantity(
@@ -1395,8 +1427,11 @@ class ABACUSParser(FairdiParser):
             self.input_parser.mainfile = os.path.join(self.out_parser.maindir, input_file)
         input_names = ['scf_max_iteration', 'x_abacus_scf_threshold_density', 
                         'x_abacus_mixing_method', 'x_abacus_mixing_beta', 'x_abacus_gamma_algorithms', 
-                        'x_abacus_diagonalization_algorithm', 'x_abacus_initial_magnetization_total'
-                        'x_abacus_dispersion_correction_method']
+                        'x_abacus_diagonalization_algorithm', 'x_abacus_initial_magnetization_total',
+                        'x_abacus_dispersion_correction_method', 'x_abacus_exx_ccp_rmesh_times',
+                        'x_abacus_exx_dm_threshold', 'x_abacus_exx_cauchy_threshold',
+                        'x_abacus_exx_schwarz_threshold', 'x_abacus_exx_c_threshold',
+                        'x_abacus_exx_v_threshold', 'x_abacus_exx_pca_threshold']
         for key in input_names:
             val = self.input_parser.get(key)
             if val is None:
