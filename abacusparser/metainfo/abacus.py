@@ -884,7 +884,8 @@ class section_scf_iteration(public.section_scf_iteration):
 
     x_abacus_magnetization_total = Quantity(
         type=np.dtype(np.float64),
-        shape=[],
+        unit='bohr_magneton',
+        shape=[3],
         description='''
         Total per-cell magnetization
         ''',
@@ -892,6 +893,7 @@ class section_scf_iteration(public.section_scf_iteration):
 
     x_abacus_magnetization_absolute = Quantity(
         type=np.dtype(np.float64),
+        unit='bohr_magneton',
         shape=[],
         description='''
         Absolute per-cell magnetization

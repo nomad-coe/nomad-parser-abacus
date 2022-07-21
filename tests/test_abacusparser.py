@@ -290,11 +290,25 @@ def test_spin2(parser):
     assert sec_method.number_of_spin_channels == 2
 
 
-if __name__ == '__main__':
-    test_parser = parser()
-    test_band(test_parser)
-    test_dos(test_parser)
-    test_scf(test_parser)
-    test_md(test_parser)
-    test_hse(test_parser)
-    test_spin2(test_parser)
+def test_dftu(parser):
+    archive = EntryArchive()
+    parser.parse(r'data\MnBiTe_dftu\running_scf.log', archive, None)
+
+    sec_run = archive.section_run[0]
+
+    sec_method = sec_run.section_method[0]
+    assert sec_method.number_of_spin_channels == 1
+    assert sec_method.x_abacus_spin_orbit == True
+    assert sec_method.relativity_method == 'full relativistic'
+    assert sec_method.x_abacus_initial_magnetization_total == 0.0
+    assert sec_method.x_abacus_diagonalization_algorithm == 'genelpa'
+    assert sec_method.electronic_structure_method == 'DFT+U'
+
+    sec_system = sec_run.section_system[0]
+    assert sec_system.atom_labels == ['Mn', 'Mn', 'Bi', 'Bi', 'Bi', 'Bi', 'Te', 'Te', 'Te', 'Te', 'Te', 'Te', 'Te', 'Te']
+    assert sec_system.x_abacus_number_of_species == 4
+
+    sec_scc = sec_run.section_single_configuration_calculation[0]
+    sec_scf = sec_scc.section_scf_iteration
+    assert sec_scf[9].x_abacus_magnetization_total[2].magnitude == approx(-0.00029174)
+    assert sec_scf[16].x_abacus_magnetization_absolute.magnitude == approx(10.04743427)

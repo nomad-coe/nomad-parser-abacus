@@ -61,7 +61,7 @@ class ABACUSInputParser(TextParser):
             ),
             Quantity(
                 'x_abacus_init_velocities',
-                r'\n *init_vel\s*(\d+)', repeats=False,
+                r'\n *init_vel\s*(\d+)', repeats=False, dtype=bool
             ),
             Quantity(
                 'xc',
@@ -108,6 +108,10 @@ class ABACUSInputParser(TextParser):
                 r'\n *smearing_width\s*(\w+)', repeats=False, unit='rydberg'
             ),
             Quantity(
+                'dft_plus_u',
+                r'\n *dft_plus_u\s*(\w+)', repeats=False, dtype=bool
+            ),
+            Quantity(
                 xsection_method.x_abacus_mixing_method,
                 rf'\n *mixing_type\s*(\S+)', repeats=False
             ),
@@ -125,7 +129,7 @@ class ABACUSInputParser(TextParser):
             ),
             Quantity(
                 xsection_method.x_abacus_gamma_algorithms,
-                rf'\n *gamma_only\s*(\d)', repeats=False
+                rf'\n *gamma_only\s*(\d)', repeats=False, dtype=bool
             ),
             Quantity(
                 xsection_method.x_abacus_scf_threshold_density,
@@ -843,7 +847,7 @@ class ABACUSOutParser(TextParser):
                     ),
                     Quantity(
                         'magnetization_absolute',
-                        rf'absolute magnetism \(Bohr mag/cell\)\s*({re_float})',
+                        rf'absolute magnetism \(Bohr mag/cell\)\s*=\s*({re_float})',
                         dtype=float, unit='bohr_magneton'
                     ),
                 ]
@@ -1477,15 +1481,17 @@ class ABACUSParser(FairdiParser):
                 sec_specie_basis_set.x_abacus_specie_basis_set_rmesh = data.nr
                 sec_specie_basis_set.x_abacus_specie_basis_set_number_of_orbitals = len(ln_list)
 
-        # TODO identify if dft+u
-        sec_method.electronic_structure_method = 'DFT'
+        if self.input_parser.get('dft_plus_u'):
+            sec_method.electronic_structure_method = 'DFT+U'
+        else:
+            sec_method.electronic_structure_method = 'DFT'
 
         # spin mode
         nspin_ori = header.get('number_of_spin_channels')
         nspin = 1 if nspin_ori==4 else nspin_ori
         sec_method.number_of_spin_channels = nspin
         sec_method.x_abacus_spin_orbit = nspin_ori==4
-        sec_method.x_abacus_noncollinear = True if header.get('atom_data')[-1].get('noncollinear_magnetization') else False
+        sec_method.x_abacus_noncollinear = True if header.get('atom_data')[-1].get('noncollinear_magnetization').any() else False
         sec_method.relativity_method = ('full' if nspin_ori==4 else 'scalar')+' relativistic'
 
         # atom_kind and pseudopotential settings
@@ -1556,7 +1562,6 @@ class ABACUSParser(FairdiParser):
         self.archive = archive
         self.logger = logger if logger is not None else logging
 
-        self._electronic_structure_method = 'DFT'
         self.init_parser()
 
         sec_run = self.archive.m_create(Run)
