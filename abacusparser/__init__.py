@@ -17,4 +17,4 @@
 # limitations under the License.
 #
 
-from abacusparser.abacus_parser import ABACUSParser
+from .parser import ABACUSParser
