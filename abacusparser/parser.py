@@ -1293,6 +1293,7 @@ class ABACUSParser:
 
             # energies
             sec_energy = sec_scc.m_create(Energy)
+            vdw_m_dict = {'d2':'DFT-D2', 'd3_0':'DFT-D3(0)', 'd3_bj':'DFT-D3(BJ)'}
             for scf_iterations in sub_section:
                 # TODO AN: I do not quite understand this loop over scf_iterations
                 # and the loop over iteration
@@ -1310,6 +1311,7 @@ class ABACUSParser:
                     # TODO AN these methods are not in the enumerated list
                     if vdw_method in ['d2', 'd3_0', 'd3_bj']:
                         kind = "G06"
+                        sec_run.method[-1].x_abacus_dispersion_correction_method = vdw_m_dict[vdw_method]
                     else:
                         kind = ""
                     sec_run.method[-1].electronic.van_der_waals_method = kind
