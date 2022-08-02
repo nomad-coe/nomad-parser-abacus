@@ -30,7 +30,7 @@ from nomad.parsing.file_parser import TextParser, Quantity, DataTextParser
 from nomad.datamodel.metainfo.simulation.run import Run, Program, TimeRun
 from nomad.datamodel.metainfo.simulation.method import (
     AtomParameters, Method, BasisSet, BasisSetCellDependent, Electronic, Smearing, Scf,
-    DFT, XCFunctional, Functional)
+    DFT, XCFunctional, Functional, KMesh)
 from nomad.datamodel.metainfo.simulation.system import System, Atoms, Symmetry
 from nomad.datamodel.metainfo.simulation.calculation import (
     Calculation, Energy, Dos, DosValues, BandStructure, BandEnergies, EnergyEntry, ScfIteration,
@@ -1308,12 +1308,10 @@ class ABACUSParser:
                     vdw_method = self.input_parser.get(
                         'x_abacus_dispersion_correction_method')
                     # TODO AN these methods are not in the enumerated list
-                    if vdw_method == 'd2':
-                        kind = 'DFT-D2'
-                    elif vdw_method == 'd3_0':
-                        kind = 'DFT-D3(0)'
-                    elif vdw_method == 'd3_bj':
-                        kind = 'DFT-D3(BJ)'
+                    if vdw_method in ['d2', 'd3_0', 'd3_bj']:
+                        kind = "G06"
+                    else:
+                        kind = ""
                     sec_run.method[-1].electronic.van_der_waals_method = kind
                 sec_energy.total = EnergyEntry(
                     value=scf_iterations.get('total'))
@@ -1398,7 +1396,6 @@ class ABACUSParser:
         for section in self.out_parser.get('non_scf', []):
             parse_section(section)
             parse_bandstructure(section)
-            # TODO: parse POLARIZATION
 
         if self.sampling_method is None:
             self.sampling_method = 'geometry_optimization'
@@ -1414,6 +1411,14 @@ class ABACUSParser:
         sec_method = sec_run.m_create(Method)
         sec_electronic = sec_method.m_create(Electronic)
         header = self.out_parser.get('header', {})
+
+        # kmesh
+        sec_kmesh = sec_method.m_create(KMesh)
+        nkstot = header.get('nkstot')
+        nkstot_ibz = header.get('nkstot_ibz')
+        sec_kmesh.n_points = nkstot_ibz if nkstot_ibz is not None else nkstot
+        sec_kmesh.generation_method = header.get('ksampling_method')
+        sec_kmesh.points, sec_kmesh.weights = header.get('k_points')
 
         # smearing
         occupations = self.input_parser.get('occupations', 'smearing')
