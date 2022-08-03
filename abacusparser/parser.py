@@ -1475,7 +1475,6 @@ class ABACUSParser:
             else:
                 smearing_kind = 'empty'
         smearing_width = self.input_parser.get('smearing_width')
-        print(smearing_width)
         if smearing_width is not None:
             smearing_width = smearing_width.to('joule').magnitude
         sec_electronic.smearing = Smearing(
