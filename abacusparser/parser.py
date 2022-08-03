@@ -110,7 +110,7 @@ class ABACUSInputParser(TextParser):
             ),
             Quantity(
                 'smearing_width',
-                rf'\n *smearing_width\s*({re_float})', repeats=False, unit='rydberg'
+                rf'\n *smearing_sigma\s*({re_float})', repeats=False, unit='rydberg'
             ),
             Quantity(
                 'dft_plus_u',
@@ -1477,7 +1477,7 @@ class ABACUSParser:
         smearing_width = self.input_parser.get('smearing_width')
         print(smearing_width)
         if smearing_width is not None:
-            smearing_width = smearing_width.magnitude
+            smearing_width = smearing_width.to('joule').magnitude
         sec_electronic.smearing = Smearing(
             kind=smearing_kind, width=smearing_width)
 

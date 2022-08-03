@@ -283,7 +283,8 @@ def test_spin2(parser):
     sec_run = archive.run[0]
     sec_scc = sec_run.calculation[0]
     # TODO fermi energy not set
-    # assert sec_scc.energy.fermi == 0
+    sec_k_band = sec_scc.band_structure_electronic[0]
+    assert sec_k_band.energy_fermi.magnitude == 0
     sec_dos = sec_scc.dos_electronic[0]
     assert sec_dos.energies.shape == (2265, )
     assert sec_dos.total[0].value.shape == (2, 2265)
