@@ -105,16 +105,16 @@ class ABACUSInputParser(TextParser):
                 r'\n *occupations\s*(\w+)', repeats=False,
             ),
             Quantity(
-                'smearing_kind',
+                'smearing_method',
                 r'\n *smearing_method\s*(\w+)', repeats=False,
             ),
             Quantity(
                 'smearing_width',
-                r'\n *smearing_width\s*(\w+)', repeats=False, unit='rydberg'
+                rf'\n *smearing_sigma\s*({re_float})', repeats=False, unit='rydberg'
             ),
             Quantity(
                 'dft_plus_u',
-                r'\n *dft_plus_u\s*(\w+)', repeats=False, dtype=bool
+                r'\n *dft_plus_u\s*(\d)', repeats=False, dtype=bool
             ),
             Quantity(
                 xsection_method.x_abacus_mixing_method,
@@ -896,7 +896,7 @@ class ABACUSOutParser(TextParser):
             ),
             Quantity(
                 'fermi_energy_dos',
-                rf'Fermi energy (?:\(spin = \d+\)\s*|\s*)is\s*({re_float})\s*Rydberg', dtype=float, repeats=True
+                rf'Fermi energy (?:\(spin = \d+\)\s*|\s*)is\s*({re_float})\s*Rydberg', dtype=float, repeats=False
             ),
             Quantity(
                 'ionic_phase',
@@ -927,7 +927,7 @@ class ABACUSOutParser(TextParser):
             Quantity(
                 'self_consistent',
                 r'((STEP OF ION RELAXATION\s*:\s*\d+|RELAX IONS\s*:\s*\d+\s*\(in total: \d+\))[\s\S]+?(?:Setup the structure|\!FINAL_ETOT_IS))',
-                repeats=True, sub_parser=TextParser(quantities=scf_quantities)
+                repeats=False, sub_parser=TextParser(quantities=scf_quantities)
             )
         ]
 
@@ -935,7 +935,7 @@ class ABACUSOutParser(TextParser):
             Quantity(
                 'self_consistent',
                 r'([^NON]SELF-CONSISTENT[\s\S]+?\!FINAL_ETOT_IS)',
-                repeats=True, sub_parser=TextParser(quantities=scf_quantities)
+                repeats=False, sub_parser=TextParser(quantities=scf_quantities)
             )
         ]
 
@@ -943,7 +943,7 @@ class ABACUSOutParser(TextParser):
             Quantity(
                 'nonself_consistent',
                 r'(NONSELF\-CONSISTENT[\s\S]+?\|CLASS_NAME)',
-                repeats=True, sub_parser=TextParser(quantities=nscf_quantities)
+                repeats=False, sub_parser=TextParser(quantities=nscf_quantities)
             )
         ]
 
@@ -954,7 +954,7 @@ class ABACUSOutParser(TextParser):
             Quantity(
                 'self_consistent',
                 r'(STEP OF MOLECULAR DYNAMICS\s*:\s*\d+[\s\S]+?Energy\s*Potential\s*Kinetic)',
-                repeats=True, sub_parser=TextParser(quantities=scf_quantities)
+                repeats=False, sub_parser=TextParser(quantities=scf_quantities)
             ),
             Quantity(
                 'energy',
@@ -1126,9 +1126,31 @@ class ABACUSParser:
         nbands = header.get('nbands')
 
         def parse_bandstructure(section):
-            sec_nscf = section.get('nonself_consistent')[-1]
+            sec_scc = sec_run.m_create(Calculation)
+            sec_nscf = section.get('nonself_consistent')
 
-            sec_scc = sec_run.calculation[-1]
+            # atom data
+            parse_system()
+
+            # search adjacent atoms
+            searching_sec = sec_nscf.get('search_adjacent_atoms')
+            if searching_sec is not None:
+                for key in ['longest_orb_rcut', 'longest_nonlocal_projector_rcut',
+                            'searching_radius', 'searching_radius_unit']:
+                    val = searching_sec.get(key)
+                    if val:
+                        setattr(sec_scc, f'x_abacus_{key}', val)
+
+            # grid_integration
+            grid_sec = sec_nscf.get('grid_integration')
+            if grid_sec is not None:
+                for key in ['read_space_grid', 'big_cell_numbers_in_grid',
+                            'meshcell_numbers_in_big_cell', 'extended_fft_grid',
+                            'extended_fft_grid_dim']:
+                    val = grid_sec.get(key)
+                    if val is not None:
+                        setattr(sec_scc, f'x_abacus_{key}', val)
+
             sec_k_band = BandStructure()
             sec_scc.band_structure_electronic.append(sec_k_band)
             sec_k_band.reciprocal_cell = sec_run.system[-1].x_abacus_reciprocal_vectors
@@ -1139,7 +1161,7 @@ class ABACUSParser:
                 efermi = sec_nscf.get('fermi_energy_dos')
             if efermi is not None:
                 # fermi energy is not spin-dependent
-                sec_k_band.energy_fermi = efermi[0] * ureg.rydberg
+                sec_k_band.energy_fermi = efermi * ureg.rydberg
 
             band_k_points = []
             band_energies = []
@@ -1267,13 +1289,12 @@ class ABACUSParser:
             # atom data
             parse_system()
 
-            sub_section = section.get(
-                'self_consistent', section.get('nonself_consistent'))
+            sub_section = section.get('self_consistent')
             if sub_section is None:
                 return
 
             # search adjacent atoms
-            searching_sec = sub_section[-1].get('search_adjacent_atoms')
+            searching_sec = sub_section.get('search_adjacent_atoms')
             if searching_sec is not None:
                 for key in ['longest_orb_rcut', 'longest_nonlocal_projector_rcut',
                             'searching_radius', 'searching_radius_unit']:
@@ -1282,7 +1303,7 @@ class ABACUSParser:
                         setattr(sec_scc, f'x_abacus_{key}', val)
 
             # grid_integration
-            grid_sec = sub_section[-1].get('grid_integration')
+            grid_sec = sub_section.get('grid_integration')
             if grid_sec is not None:
                 for key in ['read_space_grid', 'big_cell_numbers_in_grid',
                             'meshcell_numbers_in_big_cell', 'extended_fft_grid',
@@ -1294,12 +1315,10 @@ class ABACUSParser:
             # energies
             sec_energy = sec_scc.m_create(Energy)
             vdw_m_dict = {'d2':'DFT-D2', 'd3_0':'DFT-D3(0)', 'd3_bj':'DFT-D3(BJ)'}
-            for scf_iterations in sub_section:
-                # TODO AN: I do not quite understand this loop over scf_iterations
-                # and the loop over iteration
-                scf_iteration = scf_iterations.get('iteration')
-                if scf_iteration is None:
-                    continue
+            # TODO AN: I do not quite understand this loop over scf_iterations
+            # and the loop over iteration
+            scf_iteration = sub_section.get('iteration')
+            if scf_iteration is not None:
                 sec_scc.n_scf_iterations = len(scf_iteration)
                 for iteration in scf_iteration:
                     parse_scf(iteration)
@@ -1315,18 +1334,19 @@ class ABACUSParser:
                     else:
                         kind = ""
                     sec_run.method[-1].electronic.van_der_waals_method = kind
-                sec_energy.total = EnergyEntry(
-                    value=scf_iterations.get('total'))
-                sec_energy.fermi = scf_iterations.get('reference_fermi')
                 sec_energy.xc = EnergyEntry(
                     value=iteration.get('XC_functional'))
                 sec_energy.electrostatic = EnergyEntry(
                     correction=iteration.get('correction_hartree'))
                 sec_energy.hartree_fock_x_scaled = EnergyEntry(
                     value=iteration.get('hartree_fock_X_scaled'))
+            
+                sec_energy.total = EnergyEntry(
+                    value=sub_section.get('total'))
+                sec_energy.fermi = sub_section.get('reference_fermi')
 
             # eigenvalues
-            eigenvalues = sub_section[-1].get('energy_occupation')
+            eigenvalues = sub_section.get('energy_occupation')
             if eigenvalues is not None:
                 kpoints, npws, eigs, eig, occs, occ = [], [], [], [], [], []
                 sec_eigenvalues = sec_scc.m_create(BandEnergies)
@@ -1348,13 +1368,13 @@ class ABACUSParser:
                     header.get('reciprocal_vectors')), np.array(kpoints).T).T
 
             # force
-            forces = sub_section[-1].get('forces')
+            forces = sub_section.get('forces')
             if forces is not None:
                 sec_scc.forces = Forces(total=ForcesEntry(value=forces))
 
             # stress and pressure
-            stress = sub_section[-1].get('stress')
-            pressure = sub_section[-1].get('pressure')
+            stress = sub_section.get('stress')
+            pressure = sub_section.get('pressure')
             if stress is not None:
                 sec_scc.stress = Stress(total=StressEntry(value=stress))
             if pressure is not None:
@@ -1396,7 +1416,6 @@ class ABACUSParser:
 
         # nscf
         for section in self.out_parser.get('non_scf', []):
-            parse_section(section)
             parse_bandstructure(section)
 
         if self.sampling_method is None:
@@ -1413,33 +1432,6 @@ class ABACUSParser:
         sec_method = sec_run.m_create(Method)
         sec_electronic = sec_method.m_create(Electronic)
         header = self.out_parser.get('header', {})
-
-        # kmesh
-        sec_kmesh = sec_method.m_create(KMesh)
-        nkstot = header.get('nkstot')
-        nkstot_ibz = header.get('nkstot_ibz')
-        sec_kmesh.n_points = nkstot_ibz if nkstot_ibz is not None else nkstot
-        sec_kmesh.generation_method = header.get('ksampling_method')
-        sec_kmesh.points, sec_kmesh.weights = header.get('k_points')
-
-        # smearing
-        occupations = self.input_parser.get('occupations', 'smearing')
-        if occupations == 'tetrahedra':
-            smearing_kind = occupations
-        elif occupations == 'fixed':
-            smearing_kind = 'empty'
-        else:
-            smearing_kind = self.input_parser.get('smearing_kind', 'fixed')
-            if smearing_kind == 'mp':
-                smearing_kind = 'methfessel-paxton'
-            elif smearing_kind in ['gauss', 'gaussian']:
-                smearing_kind == 'gaussian'
-            else:
-                smearing_kind = 'empty'
-        smearing_width = self.input_parser.get(
-            'smearing_width', 0.001 * ureg.rydberg).to('joule').magnitude
-        sec_electronic.smearing = Smearing(
-            kind=smearing_kind, width=smearing_width)
 
         # input parameters from INPUT file
         input_file = 'INPUT'
@@ -1458,6 +1450,35 @@ class ABACUSParser:
             if val is None:
                 continue
             setattr(sec_method, f'x_abacus_{key}', val)
+
+        # kmesh
+        sec_kmesh = sec_method.m_create(KMesh)
+        nkstot = header.get('nkstot')
+        nkstot_ibz = header.get('nkstot_ibz')
+        sec_kmesh.n_points = nkstot_ibz if nkstot_ibz is not None else nkstot
+        sec_kmesh.generation_method = header.get('ksampling_method')
+        sec_kmesh.points, sec_kmesh.weights = header.get('k_points')
+
+        # smearing
+        occupations = self.input_parser.get('occupations', 'smearing')
+        smearing_kind = None
+        if occupations == 'tetrahedra':
+            smearing_kind = occupations
+        elif occupations == 'fixed':
+            smearing_kind = 'empty'
+        else:
+            smearing_method = self.input_parser.get('smearing_method', 'fixed')
+            if smearing_method == 'mp':
+                smearing_kind = 'methfessel-paxton'
+            elif smearing_method in ['gauss', 'gaussian']:
+                smearing_kind = 'gaussian'
+            else:
+                smearing_kind = 'empty'
+        smearing_width = self.input_parser.get('smearing_width')
+        if smearing_width is not None:
+            smearing_width = smearing_width.to('joule').magnitude
+        sec_electronic.smearing = Smearing(
+            kind=smearing_kind, width=smearing_width)
 
         sec_method.x_abacus_basis_type = self.input_parser.get(
             'basis_type', 'pw')

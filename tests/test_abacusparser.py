@@ -122,22 +122,23 @@ def test_band(parser):
 
 
 # TODO iteration is None in sub_section
-def _test_dos(parser):
+def test_dos(parser):
     archive = EntryArchive()
     parser.parse(r'data/Si_dos/running_nscf.log', archive, None)
 
     sec_run = archive.run[0]
     assert len(sec_run.calculation) == 1
     sec_scc = sec_run.calculation[0]
-    assert sec_scc.energy.fermi.magnitude == approx(1.055136698179135e-18)
-    energy_reference = sec_scc.energy.fermi.to('eV').magnitude
+    sec_k_band = sec_scc.band_structure_electronic[0]
+    assert sec_k_band.energy_fermi.magnitude == approx(1.055136698179135e-18)
+    energy_reference = sec_k_band.energy_fermi.to('eV').magnitude
 
     sec_dos = sec_scc.dos_electronic[0]
     assert sec_dos.energies.shape == (2265, )
     assert sec_dos.total[0].value.shape == (1, 2265)
 
     energies = sec_dos.energies.to('eV').magnitude
-    values = (sec_dos.total[0].value / ureg.joule).to('1/eV').magnitude
+    values = (sec_dos.total[0].value).to('1/eV').magnitude
     nonzero = np.unique(values.nonzero())
     energies = energies[nonzero]
     energies.sort()
@@ -200,8 +201,8 @@ def test_geomopt(parser):
 
     sec_method = sec_run.method[0]
     # TODO smearing is None
-    # assert sec_method.electronic.smearing.kind == 'gaussian'
-    # assert sec_method.electronic.smearing.width.magnitude == approx(2.179872361103585e-20)
+    assert sec_method.electronic.smearing.kind == 'gaussian'
+    assert sec_method.electronic.smearing.width == approx(2.179872361103585e-20)
     assert sec_method.x_abacus_gamma_algorithms
     assert sec_method.x_abacus_basis_type == 'lcao'
 
@@ -213,12 +214,12 @@ def test_geomopt(parser):
     sec_sccs = sec_run.calculation
     assert len(sec_sccs) == 50
     # TODO empty sub sections
-    # assert sec_sccs[20].n_scf_iterations == 10
-    # assert sec_sccs[20].forces.total.value.shape == (2, 3)
-    # assert sec_sccs[20].forces.total.value[1][0].magnitude == approx(-1.292767486795188e-11)
-    # assert sec_sccs[42].stress.total.value[1][1].magnitude == approx(62419700.0)
-    # assert sec_sccs[10].pressure.magnitude == approx(-100095500.0)
-    # assert sec_sccs[48].energy.fermi.magnitude == approx(-6.769734186416427e-19)
+    assert sec_sccs[20].n_scf_iterations == 10
+    assert sec_sccs[20].forces.total.value.shape == (2, 3)
+    assert sec_sccs[20].forces.total.value[1][0].magnitude == approx(-1.292767486795188e-11)
+    assert sec_sccs[42].stress.total.value[1][1].magnitude == approx(62419700.0)
+    assert sec_sccs[10].pressure.magnitude == approx(-100095500.0)
+    assert sec_sccs[48].energy.fermi.magnitude == approx(-6.769734186416427e-19)
 
 
 def test_md(parser):
@@ -244,9 +245,9 @@ def test_md(parser):
 
 
 # TODO no test data
-def _test_hse(parser):
+def test_hse(parser):
     archive = EntryArchive()
-    parser.parse(r'data/Si-hse/running_scf.log', archive, None)
+    parser.parse(r'data/GaSb_hse/running_scf.log', archive, None)
 
     sec_run = archive.run[0]
     assert sec_run.x_abacus_program_execution_time.magnitude == 8837
@@ -255,7 +256,7 @@ def _test_hse(parser):
     assert sec_method.dft.xc_functional.hybrid[0].name == 'HYB_GGA_XC_HSE06'
     assert sec_method.dft.xc_functional.hybrid[0].parameters['$\\omega$ in m^-1'] == approx(
         2078698737.084507)
-    assert sec_method.dft.xc_functional.hybrud[0].parameters['hybrid coefficient $\\alpha$'] == 0.25
+    assert sec_method.dft.xc_functional.hybrid[0].parameters['hybrid coefficient $\\alpha$'] == 0.25
     assert sec_method.x_abacus_hse_omega.magnitude == approx(2078698737.084507)
     assert sec_method.x_abacus_hybrid_xc_coeff == 0.25
     assert sec_method.x_abacus_mixing_method == 'pulay'
@@ -282,7 +283,8 @@ def test_spin2(parser):
     sec_run = archive.run[0]
     sec_scc = sec_run.calculation[0]
     # TODO fermi energy not set
-    # assert sec_scc.energy.fermi == 0
+    sec_k_band = sec_scc.band_structure_electronic[0]
+    assert sec_k_band.energy_fermi.magnitude == 0
     sec_dos = sec_scc.dos_electronic[0]
     assert sec_dos.energies.shape == (2265, )
     assert sec_dos.total[0].value.shape == (2, 2265)
