@@ -806,10 +806,10 @@ class ABACUSOutParser(TextParser):
         scf_quantities = [
             Quantity(
                 'iteration',
-                rf'(ELEC\s*=\s*\d+\s*\-+[\s\S]+?\s*E_Fermi\s*{re_float}\s*{re_float})\n', repeats=True,
+                rf'(ELEC\s*=\s*[+\d]+\s*\-+[\s\S]+?\s*E_Fermi\s*{re_float}\s*{re_float})\n', repeats=True,
                 sub_parser=TextParser(quantities=[
                     Quantity(
-                        'elec_step', r'ELEC\s*=\s*(\d+)', dtype=int
+                        'elec_step', r'ELEC\s*=\s*[+]?(\d+)', dtype=int
                     ),
                     Quantity(
                         'density_error', rf'Density error is\s*({re_float})', dtype=float
@@ -926,7 +926,7 @@ class ABACUSOutParser(TextParser):
             ),
             Quantity(
                 'self_consistent',
-                r'((STEP OF ION RELAXATION\s*:\s*\d+|RELAX IONS\s*:\s*\d+\s*\(in total: \d+\))[\s\S]+?(?:Setup the structure|\!FINAL_ETOT_IS))',
+                r'((?:STEP OF ION RELAXATION|RELAX IONS)\s*:\s*\d+[\s\S]+?(?:Setup the|\!FINAL_ETOT_IS))',
                 repeats=False, sub_parser=TextParser(quantities=scf_quantities)
             )
         ]
@@ -1034,7 +1034,7 @@ class ABACUSOutParser(TextParser):
             ),
             Quantity(
                 'geometry_optimization',
-                r'((?:STEP OF ION RELAXATION|RELAX IONS)\s*:\s*\d+[\s\S]+?(?:Setup the|\!FINAL_ETOT_IS))',
+                r'((STEP OF ION RELAXATION|RELAX IONS)\s*:\s*\d+[\s\S]+?(Setup the|\!FINAL_ETOT_IS))',
                 sub_parser=TextParser(quantities=relax_quantities), repeats=True
             ),
             Quantity(
